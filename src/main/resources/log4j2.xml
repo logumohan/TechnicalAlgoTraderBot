@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+	<Properties>
+		<Property name="log.pattern">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} | %5p | %tid, %t | %X{instrument-name} | %X{token} | %X{duration} | %X{symbol} | %c | %m%n%ex
+        </Property>
+		<Property name="rolling.size">50MB</Property>
+		<Property name="purge.size">100MB</Property>
+
+		<Property name="log.dir">logs</Property>
+		<Property name="trade.log.dir">${log.dir}/trade</Property>
+		<Property name="log.archive.dir">${log.dir}/log-archive</Property>
+		<Property name="trade.log.archive.dir">${log.archive.dir}/trade</Property>
+		<Property name="console.log.archive.dir">${log.archive.dir}/console</Property>
+		<Property name="app.log.archive.dir">${log.archive.dir}/app</Property>
+		<Property name="auth.log.archive.dir">${log.archive.dir}/auth</Property>
+		<Property name="strategy.log.archive.dir">${log.archive.dir}/strategy</Property>
+		<Property name="kafka.log.archive.dir">${log.archive.dir}/kafka</Property>
+		<Property name="db.log.archive.dir">${log.archive.dir}/db</Property>
+		<Property name="selenium.log.archive.dir">${log.archive.dir}/selenium</Property>
+
+		<Property name="auth.log.file">auth.log</Property>
+		<Property name="console.log.file">console.log</Property>
+		<Property name="singal.generator.log.file">signal-generator.log</Property>
+		<Property name="strategy.log.file">strategy.log</Property>
+		<Property name="kafka.log.file">kafka.log</Property>
+		<Property name="dblog.log.file">dblog.log</Property>
+		<Property name="selenium.log.file">selenium.log</Property>
+		<Property name="trade.log.file">trade.log</Property>
+		<Property name="archive.format">%d{dd-MM-yyyy}-%i.gz</Property>
+	</Properties>
+
+	<Appenders>
+		<Console name="ConsoleAppender" target="SYSTEM_OUT" follow="false">
+			<PatternLayout pattern="${log.pattern}" />
+		</Console>
+
+		<RollingFile name="consolelog" fileName="${log.dir}/${console.log.file}" filePattern="${console.log.archive.dir}/${console.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${console.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${console.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="applog" fileName="${log.dir}/${singal.generator.log.file}" filePattern="${app.log.archive.dir}/${singal.generator.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${app.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${singal.generator.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="strategylog" fileName="${log.dir}/${strategy.log.file}" filePattern="${app.log.archive.dir}/${strategy.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${strategy.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${strategy.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="authlog" fileName="${log.dir}/${auth.log.file}" filePattern="${auth.log.archive.dir}/${auth.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${auth.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${auth.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="kafkalog" fileName="${log.dir}/${kafka.log.file}" filePattern="${kafka.log.archive.dir}/${kafka.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${kafka.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${kafka.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="dblog" fileName="${log.dir}/${dblog.log.file}" filePattern="${db.log.archive.dir}/${dblog.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${db.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${dblog.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<RollingFile name="seleniumlog" fileName="${log.dir}/${selenium.log.file}" filePattern="${selenium.log.archive.dir}/${selenium.log.file}.${archive.format}">
+			<PatternLayout>
+				<Pattern>${log.pattern}</Pattern>
+			</PatternLayout>
+			<Policies>
+				<SizeBasedTriggeringPolicy size="${rolling.size}" />
+				<OnStartupTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="nomax">
+				<Delete basePath="${selenium.log.archive.dir}" maxDepth="1">
+					<IfFileName glob="${selenium.log.file}.*" />
+					<IfAccumulatedFileSize exceeds="${purge.size}" />
+				</Delete>
+			</DefaultRolloverStrategy>
+		</RollingFile>
+
+		<Routing name="tradelog">
+			<Routes pattern="$${ctx:tradeId}">
+				<Route>
+					<RollingFile name="rolling" fileName="${trade.log.dir}/${ctx:tradeId}/${trade.log.file}" filePattern="${trade.log.archive.dir}/${ctx:tradeId}/${trade.log.file}.${archive.format}">
+						<PatternLayout>
+							<Pattern>${log.pattern}</Pattern>
+						</PatternLayout>
+						<Policies>
+							<SizeBasedTriggeringPolicy size="${rolling.size}" />
+							<OnStartupTriggeringPolicy />
+						</Policies>
+						<DefaultRolloverStrategy fileIndex="nomax">
+							<Delete basePath="${trade.log.archive.dir}/${ctx:tradeId}" maxDepth="1">
+								<IfFileName glob="${trade.log.file}.*" />
+								<IfAccumulatedFileSize exceeds="${purge.size}" />
+							</Delete>
+						</DefaultRolloverStrategy>
+					</RollingFile>
+				</Route>
+			</Routes>
+		</Routing>
+	</Appenders>
+
+	<Loggers>
+		<Root level="info">
+			<AppenderRef ref="ConsoleAppender" />
+			<AppenderRef ref="consolelog" />
+		</Root>
+		<Logger name="com.trading.platform" level="info" additivity="false">
+			<AppenderRef ref="applog" />
+		</Logger>
+		<Logger name="AUTH" level="debug" additivity="false">
+			<AppenderRef ref="authlog" />
+		</Logger>
+		<Logger name="MACD_STRATEGY" level="info" additivity="false">
+			<AppenderRef ref="strategylog" />
+		</Logger>
+		<Logger name="IMACD_STRATEGY" level="info" additivity="false">
+			<AppenderRef ref="strategylog" />
+		</Logger>
+		<Logger name="HA_MACD_STRATEGY" level="info" additivity="false">
+			<AppenderRef ref="strategylog" />
+		</Logger>
+		<Logger name="SUPER_TREND_IMACD_STRATEGY" level="info" additivity="false">
+			<AppenderRef ref="strategylog" />
+		</Logger>
+		<Logger name="org.apache.kafka" level="info" additivity="false">
+			<AppenderRef ref="kafkalog" />
+		</Logger>
+		<Logger name="org.springframework.kafka" level="info" additivity="false">
+			<AppenderRef ref="kafkalog" />
+		</Logger>
+		<Logger name="org.hibernate" level="info" additivity="false">
+			<AppenderRef ref="dblog" />
+		</Logger>
+		<Logger name="com.zaxxer.hikari" level="info" additivity="false">
+			<AppenderRef ref="dblog" />
+		</Logger>
+		<Logger name="org.springframework.orm.jpa" level="info" additivity="false">
+			<AppenderRef ref="dblog" />
+		</Logger>
+		<Logger name="org.asynchttpclient.netty" level="info" additivity="false">
+			<AppenderRef ref="dblog" />
+		</Logger>
+		<Logger name="org.openqa.selenium" level="info" additivity="false">
+			<AppenderRef ref="seleniumlog" />
+		</Logger>
+		<Logger name="okhttp3.OkHttpClient" level="info" additivity="false">
+			<AppenderRef ref="seleniumlog" />
+		</Logger>
+		<Logger name="TRADE" level="info" additivity="false">
+			<AppenderRef ref="tradelog" />
+		</Logger>
+	</Loggers>
+</Configuration>
