@@ -2,7 +2,6 @@ package com.trading.platform.controller;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -62,6 +61,7 @@ public class JobsController {
 				updatedJob.setUserName(job.getUserName());
 				updatedJob.setJobType(job.getJobType());
 				updatedJob.setStrategy(job.getStrategy());
+				updatedJob.setMarketType(job.getMarketType());
 				updatedJob.setTrailingStrategy(job.getTrailingStrategy());
 				updatedJob.setTrailBy(job.getTrailBy());
 				updatedJob.setAtr(job.getAtr());
@@ -97,7 +97,7 @@ public class JobsController {
 			jobList = jobsRORepository.findJobs();
 		}
 
-		return new ResponseEntity<>(jobList.stream().map(JobsDto::of).collect(Collectors.toList()), HttpStatus.OK);
+		return new ResponseEntity<>(jobList.stream().map(JobsDto::of).toList(), HttpStatus.OK);
 	}
 
 	@GetMapping({ "/jobs-by-type/{job-type}", "/jobs-by-type/{job-type}/{strategy}" })
@@ -114,7 +114,7 @@ public class JobsController {
 			jobList = jobsRORepository.findJobsByType(jobType);
 		}
 
-		return new ResponseEntity<>(jobList.stream().map(JobsDto::of).collect(Collectors.toList()), HttpStatus.OK);
+		return new ResponseEntity<>(jobList.stream().map(JobsDto::of).toList(), HttpStatus.OK);
 	}
 
 	@DeleteMapping({ "/jobs/delete/{job-name}", "/jobs/delete/{job-name}/{user}" })

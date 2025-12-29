@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,6 +21,7 @@ import com.trading.platform.persistence.entity.Signal;
 import com.trading.platform.service.KiteLoginModuleImpl;
 import com.trading.platform.service.kite.KiteSessionService;
 import com.trading.platform.service.signal.OptionType;
+import com.trading.platform.trading.indicator.MarketTrendInfo;
 import com.trading.platform.util.SignalGeneratorUtil;
 import com.trading.platform.util.TradeUtil;
 import com.zerodhatech.models.Quote;
@@ -62,6 +62,10 @@ public class TradeJobScheduler {
 
 	private Predicate<Job> getStrategyFilter(Signal signal) {
 		return (Job job) -> signal.getStrategy().equals(job.getStrategy());
+	}
+	
+	private Predicate<Job> getMarketTypeFilter(MarketTrendInfo trendInfo) {
+		return (Job job) -> trendInfo.getMarketType().name().equalsIgnoreCase(job.getMarketType());
 	}
 
 	private Predicate<Job> getVixFilter(Signal signal) {
@@ -163,14 +167,15 @@ public class TradeJobScheduler {
 		LOGGER.info("Updated signal for the job - {}, signal - {}", job, signal);
 	}
 
-	private void scheduleATRTSLPaperTrade(Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	private void scheduleATRTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getATRPaperJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
+		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleATRTSLPaperTrade: Job List - {}", jobsList);
 		for (Job job : jobsList) {
 			try {
@@ -198,14 +203,15 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleFixedTSLPaperTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getFixedPaperJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
+		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleFixedTSLPaperTrade: Job List - {}", jobsList);
 		for (Job job : jobsList) {
 			try {
@@ -233,14 +239,15 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleFixedProfitPaperTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedProfitPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getFixedProfitPaperJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
+		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleFixedProfitPaperTrade: Job List - {}", jobsList);
 		for (Job job : jobsList) {
 			try {
@@ -270,14 +277,15 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleMultiTargetPaperTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleMultiTargetPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getMultiTargetPaperJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
+		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleMultiTargetPaperTrade: Job List - {}", jobsList);
 		for (Job job : jobsList) {
 			try {
@@ -307,15 +315,17 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleATRTSLLiveTrade(Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	private void scheduleATRTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getATRLiveJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
-
+		jobsList = jobsList.stream().filter(jobFilter).toList();
+		LOGGER.info("scheduleATRTSLLiveTrade: Job List - {}", jobsList);
+		
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
@@ -344,16 +354,18 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleFixedTSLLiveTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getFixedLiveJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
-
+		jobsList = jobsList.stream().filter(jobFilter).toList();
+		LOGGER.info("scheduleFixedTSLLiveTrade: Job List - {}", jobsList);
+		
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
@@ -382,15 +394,17 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleFixedProfitLiveTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedProfitLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getFixedProfitLiveJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
-
+		jobsList = jobsList.stream().filter(jobFilter).toList();
+		LOGGER.info("scheduleFixedProfitLiveTrade: Job List - {}", jobsList);
+		
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
@@ -420,15 +434,17 @@ public class TradeJobScheduler {
 		}
 	}
 
-	private void scheduleMultiTargetLiveTrade(Signal signal, InstrumentSubscription subscription,
+	private void scheduleMultiTargetLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
+				.and(getMarketTypeFilter(trendInfo))
 				.and(getAggregationTypeFilter(signal))
 				.and(getVixFilter(signal))
 				.and(getMultiTargetLiveJobFilter());
 		List<Job> jobsList = jobsRepository.findJobs();
-		jobsList = jobsList.stream().filter(jobFilter).collect(Collectors.toList());
-
+		jobsList = jobsList.stream().filter(jobFilter).toList();
+		LOGGER.info("scheduleMultiTargetLiveTrade: Job List - {}", jobsList);
+		
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
@@ -460,24 +476,24 @@ public class TradeJobScheduler {
 
 	public List<String> getLiveJobStrategies() {
 		List<Job> jobsList = jobsRepository.findJobs();
-		return jobsList.stream().filter(Job::isTradable).map(Job::getStrategy).collect(Collectors.toList());
+		return jobsList.stream().filter(Job::isTradable).map(Job::getStrategy).toList();
 	}
 
-	public void schedulePaperTrades(Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	public void schedulePaperTrades(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
-		scheduleATRTSLPaperTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedTSLPaperTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedProfitPaperTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleMultiTargetPaperTrade(signal, subscription, tradeManager, instrumentIndicators);
+		scheduleATRTSLPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleFixedTSLPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleFixedProfitPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleMultiTargetPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
 		LOGGER.info("Scheduled paper trades, signal = {}", signal);
 	}
 
-	public void scheduleLiveTrades(Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	public void scheduleLiveTrades(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
-		scheduleATRTSLLiveTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedTSLLiveTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedProfitLiveTrade(signal, subscription, tradeManager, instrumentIndicators);
-		scheduleMultiTargetLiveTrade(signal, subscription, tradeManager, instrumentIndicators);
+		scheduleATRTSLLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleFixedTSLLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleFixedProfitLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleMultiTargetLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
 		LOGGER.info("Scheduled live trades, signal = {}", signal);
 	}
 

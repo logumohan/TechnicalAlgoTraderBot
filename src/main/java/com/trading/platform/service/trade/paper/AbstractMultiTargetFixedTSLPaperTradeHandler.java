@@ -2,7 +2,6 @@ package com.trading.platform.service.trade.paper;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.CloseableThreadContext;
 
@@ -142,7 +141,7 @@ public abstract class AbstractMultiTargetFixedTSLPaperTradeHandler extends Abstr
 
 	private void markPositionExit(Order order, double optionExitLtp) {
 		List<PositionInfo> positionInfoList = getTradeInfo().getPositionInfoList().stream().filter(
-				PositionInfo::isActive).collect(Collectors.toList());
+				PositionInfo::isActive).toList();
 		for (PositionInfo positionInfo : positionInfoList) {
 			if (positionInfo.isActive()) {
 				markExit(positionInfo, getLastTradedPrice(), optionExitLtp,

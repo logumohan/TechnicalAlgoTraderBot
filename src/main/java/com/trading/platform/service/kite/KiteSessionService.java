@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -243,7 +242,7 @@ public class KiteSessionService {
 		try {
 			return getInstruments().stream()
 					.map(Instrument::getInstrument_token)
-					.collect(Collectors.toList());
+					.toList();
 		} catch (Exception e) {
 			LOGGER.error("Error fetching all tokens", e);
 		}

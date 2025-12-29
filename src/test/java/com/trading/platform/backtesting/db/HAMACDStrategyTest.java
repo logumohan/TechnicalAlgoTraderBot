@@ -2,7 +2,11 @@ package com.trading.platform.backtesting.db;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.time.ZonedDateTime;
+import java.time.Duration;
+import java.time.Instant;
+
+import org.ta4j.core.Bar;
+import org.ta4j.core.BaseBar;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -26,16 +30,37 @@ public class HAMACDStrategyTest extends AbstractBackTest {
 			String[] line;
 			reader.readNext(); // skip header
 			while ((line = reader.readNext()) != null) {
-				ZonedDateTime barStartTime = BarSeriesUtil.getStartTime(line[0],
+				Instant barStartTime = BarSeriesUtil.getStartTime(line[0],
 						CSV_DATE_FORMATTER);
-				ZonedDateTime barEndTime = BarSeriesUtil.getEndTime(barStartTime,
+				Instant barEndTime = BarSeriesUtil.getEndTime(barStartTime,
 						TestUtil.getDuration(aggregationType.getName()));
-				series.addBar(barEndTime, Double.valueOf(line[1]),
-						Double.valueOf(line[2]), Double.valueOf(line[3]),
-						Double.valueOf(line[4]));
-				haSeries.addBar(barEndTime, Double.valueOf(line[5]),
-						Double.valueOf(line[6]), Double.valueOf(line[7]),
-						Double.valueOf(line[8]));
+				Bar bar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    barEndTime,
+					    series.numFactory().numOf(Double.valueOf(line[1])),
+					    series.numFactory().numOf(Double.valueOf(line[2])),
+					    series.numFactory().numOf(Double.valueOf(line[3])),
+					    series.numFactory().numOf(Double.valueOf(line[4])),
+					    series.numFactory().numOf(0),
+					    series.numFactory().numOf(0),
+					    0L
+					);
+				series.addBar(bar, true);
+				
+				Bar haBar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    barEndTime,
+					    series.numFactory().numOf(Double.valueOf(line[5])),
+					    series.numFactory().numOf(Double.valueOf(line[6])),
+					    series.numFactory().numOf(Double.valueOf(line[7])),
+					    series.numFactory().numOf(Double.valueOf(line[8])),
+					    series.numFactory().numOf(0),
+					    series.numFactory().numOf(0),
+					    0L
+					);
+				haSeries.addBar(haBar, true);
 				System.out.println(line[0] + " : " + strategy.shouldBuyCE() + " : " + strategy.shouldBuyPE() + " : "
 						+ strategy.shouldSellCE() + " : " + strategy.shouldSellPE());
 			}

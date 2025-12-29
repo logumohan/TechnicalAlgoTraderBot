@@ -90,14 +90,16 @@ public class AggregatedTicksHandler implements AutoCloseable {
 		return new SimpleAsyncTaskExecutor(new BasicThreadFactory.Builder()
 				.namingPattern("tick-producer-%d")
 				.uncaughtExceptionHandler((Thread thread, Throwable e) -> LOGGER
-						.fatal("Uncaught exception in aggregated tick producer - {}", thread.getName(), e))
+						.fatal("Uncaught exception in aggregated tick producer - {}", thread
+								.getName(), e))
 				.daemon(true)
 				.priority(Thread.NORM_PRIORITY)
 				.build());
 	}
 
 	@Bean(name = "tsTickProducer")
-	public CommandLineRunner schedulingTickProducer(@Qualifier("taskExecutor") TaskExecutor executor,
+	public CommandLineRunner schedulingTickProducer(
+			@Qualifier("taskExecutor") TaskExecutor executor,
 			@Autowired AggregationTypeRepository repository) {
 		return new CommandLineRunner() {
 			public void run(String... args) throws Exception {
@@ -126,7 +128,8 @@ public class AggregatedTicksHandler implements AutoCloseable {
 			this.decimalFormat.setRoundingMode(RoundingMode.HALF_EVEN);
 		}
 
-		private BarSeriesWrapper getDefaultBarSeriesWrapper(InstrumentIndicators instrumentIndicators,
+		private BarSeriesWrapper getDefaultBarSeriesWrapper(
+				InstrumentIndicators instrumentIndicators,
 				AggregationType aggregationType) {
 			return new BarSeriesWrapperBuilder(aggregationType, instrumentIndicators)
 					.withIndicatorRepository(indicatorsRepository)
@@ -139,35 +142,49 @@ public class AggregatedTicksHandler implements AutoCloseable {
 					.put("token", String.valueOf(instrumentIndicators.getToken()))
 					.put("duration", aggregationType.getName())) {
 				if (!barSeriesMap.containsKey(instrumentIndicators.getName())) {
-					LOGGER.info("Creating bar series for aggregation type - {}", aggregationType.getName());
+					LOGGER.info("Creating bar series for aggregation type - {}", aggregationType
+							.getName());
 					barSeriesMap.putIfAbsent(instrumentIndicators.getName(),
 							getDefaultBarSeriesWrapper(instrumentIndicators, aggregationType));
-					LOGGER.info("Bar series for aggregation type - {} is created", aggregationType.getName());
+					LOGGER.info("Bar series for aggregation type - {} is created", aggregationType
+							.getName());
 				}
-				BarSeriesWrapper barSeriesWrapper = barSeriesMap.get(instrumentIndicators.getName());
+				BarSeriesWrapper barSeriesWrapper = barSeriesMap.get(instrumentIndicators
+						.getName());
 				updateHAOHLC(barSeriesWrapper, instrumentIndicators);
-				LOGGER.info("HA OHLC is updated for aggregation type - {}", aggregationType.getName());
-				BarSeriesUtil.updateBarSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
-				LOGGER.info("New tick is updated to the bar for aggregation type - {}", aggregationType.getName());
-
+				LOGGER.info("HA OHLC is updated for aggregation type - {}", aggregationType
+						.getName());
+				BarSeriesUtil.updateBarSeries(barSeriesWrapper, instrumentIndicators,
+						aggregationType);
+				LOGGER.info("New tick is updated to the bar for aggregation type - {}",
+						aggregationType.getName());
+				LOGGER.info("BAR_SERIES: Count = {}, HA Count = {}", barSeriesWrapper.getSeries()
+						.getBarCount(), barSeriesWrapper.getHaSeries().getBarCount());
+				
 				switch (aggregationType.getName()) {
 				case SignalGeneratorConstants.ONE_MINUTE:
-					oneMinuteIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					oneMinuteIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				case SignalGeneratorConstants.THREE_MINUTES:
-					threeMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					threeMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				case SignalGeneratorConstants.FIVE_MINUTES:
-					fiveMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					fiveMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				case SignalGeneratorConstants.FIFTEEN_MINUTES:
-					fifteenMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					fifteenMinutesIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				case SignalGeneratorConstants.ONE_HOUR:
-					oneHourIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					oneHourIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				case SignalGeneratorConstants.ONE_DAY:
-					dailyIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators, aggregationType);
+					dailyIndicatorService.addSeries(barSeriesWrapper, instrumentIndicators,
+							aggregationType);
 					break;
 				default:
 					break;
@@ -175,13 +192,15 @@ public class AggregatedTicksHandler implements AutoCloseable {
 			}
 		}
 
-		private void updateHAOHLC(BarSeriesWrapper barSeriesWrapper, InstrumentIndicators instrumentIndicators) {
+		private void updateHAOHLC(BarSeriesWrapper barSeriesWrapper,
+				InstrumentIndicators instrumentIndicators) {
 			BarSeries haSeries = barSeriesWrapper.getHaSeries();
 			if (haSeries.getBarCount() > 0) {
 				instrumentIndicators.setHaClosePrice(
 						Double.valueOf(decimalFormat.format((instrumentIndicators.getOpenPrice() +
-						instrumentIndicators.getHighPrice() + instrumentIndicators.getLowPrice() +
-						instrumentIndicators.getClosePrice()) / 4)));
+								instrumentIndicators.getHighPrice() + instrumentIndicators
+										.getLowPrice() +
+								instrumentIndicators.getClosePrice()) / 4)));
 
 				instrumentIndicators.setHaOpenPrice(Double.valueOf(decimalFormat.format(
 						(haSeries.getLastBar().getOpenPrice().doubleValue()
@@ -189,11 +208,13 @@ public class AggregatedTicksHandler implements AutoCloseable {
 
 				instrumentIndicators.setHaHighPrice(Double.valueOf(decimalFormat.format(Math.max(
 						instrumentIndicators.getHighPrice(),
-						Math.max(instrumentIndicators.getHaOpenPrice(), instrumentIndicators.getHaClosePrice())))));
+						Math.max(instrumentIndicators.getHaOpenPrice(), instrumentIndicators
+								.getHaClosePrice())))));
 
 				instrumentIndicators.setHaLowPrice(Double.valueOf(decimalFormat.format(Math.min(
 						instrumentIndicators.getLowPrice(),
-						Math.min(instrumentIndicators.getHaOpenPrice(), instrumentIndicators.getHaClosePrice())))));
+						Math.min(instrumentIndicators.getHaOpenPrice(), instrumentIndicators
+								.getHaClosePrice())))));
 
 			} else {
 				instrumentIndicators.setHaOpenPrice(instrumentIndicators.getOpenPrice());
@@ -249,7 +270,8 @@ public class AggregatedTicksHandler implements AutoCloseable {
 					aggregationType.getName(), tokens);
 			for (Long token : tokens) {
 				List<? extends InstrumentView> instrumentViewList = repository
-						.findOrderedByTickTimeLimitedTo(SignalGeneratorUtil.getInstrumentViewClazz(aggregationType),
+						.findOrderedByTickTimeLimitedTo(SignalGeneratorUtil.getInstrumentViewClazz(
+								aggregationType),
 								token, "bucketTickTime", Direction.DESC, 2);
 				LOGGER.debug("View - {}, Count - {}", aggregationType.getName(),
 						instrumentViewList.size());
@@ -258,8 +280,10 @@ public class AggregatedTicksHandler implements AutoCloseable {
 					InstrumentView instrumentView = instrumentViewList.get(1);
 					if (previousTickTime.get(String.valueOf(instrumentView.getToken())) == null
 							|| instrumentView.getBucketTickTime()
-									.after(previousTickTime.get(String.valueOf(instrumentView.getToken())))) {
-						publishTicksToIndicatorService(convertToInstrumentIndicators(instrumentView));
+									.after(previousTickTime.get(String.valueOf(instrumentView
+											.getToken())))) {
+						publishTicksToIndicatorService(convertToInstrumentIndicators(
+								instrumentView));
 						previousTickTime.put(String.valueOf(instrumentView.getToken()),
 								instrumentView.getBucketTickTime());
 					}
@@ -269,7 +293,8 @@ public class AggregatedTicksHandler implements AutoCloseable {
 
 		public void waitTillMarketOpen() {
 			while (MarketTimeUtil.isMarketClosed()) {
-				LOGGER.trace("TickProducer: Waiting to process the aggregated ticks as market is closed now, {}",
+				LOGGER.trace(
+						"TickProducer: Waiting to process the aggregated ticks as market is closed now, {}",
 						ZonedDateTime.now());
 				try {
 					Thread.sleep(60 * 1000L);
@@ -284,7 +309,8 @@ public class AggregatedTicksHandler implements AutoCloseable {
 		public void run() {
 			try (CloseableThreadContext.Instance context = CloseableThreadContext
 					.put("duration", aggregationType.getName())) {
-				LOGGER.info("Tick producer for the aggregation type {} is started", aggregationType.getName());
+				LOGGER.info("Tick producer for the aggregation type {} is started", aggregationType
+						.getName());
 				while (flag) {
 					waitTillMarketOpen();
 					try {
@@ -298,7 +324,8 @@ public class AggregatedTicksHandler implements AutoCloseable {
 						Thread.sleep(5 * 1000L);
 					} catch (Exception e) {
 						Thread.currentThread().interrupt();
-						LOGGER.error("Interrupted when waiting for the next polling of time series data for view - {}",
+						LOGGER.error(
+								"Interrupted when waiting for the next polling of time series data for view - {}",
 								aggregationType.getName(), e);
 					}
 				}

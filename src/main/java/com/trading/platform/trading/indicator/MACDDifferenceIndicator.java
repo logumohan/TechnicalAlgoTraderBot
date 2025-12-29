@@ -22,8 +22,7 @@ public class MACDDifferenceIndicator extends CachedIndicator<Num> {
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 }

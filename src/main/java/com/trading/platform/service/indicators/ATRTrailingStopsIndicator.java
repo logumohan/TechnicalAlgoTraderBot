@@ -2,7 +2,7 @@ package com.trading.platform.service.indicators;
 
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.AbstractIndicator;
-import org.ta4j.core.indicators.MMAIndicator;
+import org.ta4j.core.indicators.averages.MMAIndicator;
 import org.ta4j.core.indicators.helpers.TRIndicator;
 import org.ta4j.core.num.Num;
 
@@ -13,9 +13,12 @@ public class ATRTrailingStopsIndicator extends AbstractIndicator<Num> {
 	private final TRIndicator trIndicator;
 
 	private final MMAIndicator mmaIndicator;
+	
+	private BarSeries series;
 
 	public ATRTrailingStopsIndicator(BarSeries series, int barCount) {
 		this(new TRIndicator(series), barCount);
+		this.series = series;
 	}
 
 	public ATRTrailingStopsIndicator(TRIndicator trIndicator, int barCount) {
@@ -27,7 +30,7 @@ public class ATRTrailingStopsIndicator extends AbstractIndicator<Num> {
 
 	@Override
 	public Num getValue(int index) {
-		return mmaIndicator.getValue(index).multipliedBy(numOf(MULTIPLIER));
+		return mmaIndicator.getValue(index).multipliedBy(series.numFactory().numOf(MULTIPLIER));
 	}
 
 	public TRIndicator getTRIndicator() {
@@ -39,8 +42,7 @@ public class ATRTrailingStopsIndicator extends AbstractIndicator<Num> {
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 

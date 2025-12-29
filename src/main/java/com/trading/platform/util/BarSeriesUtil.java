@@ -2,16 +2,18 @@ package com.trading.platform.util;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.BaseBar;
 
 import com.trading.platform.SignalGeneratorConstants;
 import com.trading.platform.persistence.entity.AggregationType;
@@ -26,12 +28,9 @@ public class BarSeriesUtil {
 		// Do Nothing
 	}
 
-	public static ZonedDateTime getStartTime(String startTime, SimpleDateFormat formatter) {
+	public static Instant getStartTime(String startTime, SimpleDateFormat formatter) {
 		try {
-			return ZonedDateTime
-					.ofInstant(formatter.parse(startTime).toInstant(),
-							ZoneId.systemDefault())
-					.truncatedTo(ChronoUnit.SECONDS);
+			return formatter.parse(startTime).toInstant().truncatedTo(ChronoUnit.SECONDS);
 		} catch (Exception e) {
 			LOGGER.error("Error converting the start time : {} with formatter {}",
 					startTime, formatter, e);
@@ -39,21 +38,20 @@ public class BarSeriesUtil {
 		}
 	}
 
-	public static ZonedDateTime getStartTime(Date startTime) {
-		return ZonedDateTime.ofInstant(startTime.toInstant(), ZoneId.systemDefault())
-				.truncatedTo(ChronoUnit.SECONDS);
+	public static Instant getStartTime(Date startTime) {
+		return startTime.toInstant().truncatedTo(ChronoUnit.SECONDS);
 	}
 
-	public static ZonedDateTime getEndTime(ZonedDateTime barStartTime, AggregationType type) {
+	public static Instant getEndTime(Instant barStartTime, AggregationType type) {
 		return barStartTime.plus(Duration.ofSeconds(type.getDuration()));
 	}
 
-	public static ZonedDateTime getEndTime(ZonedDateTime barStartTime, Duration duration) {
+	public static Instant getEndTime(Instant barStartTime, Duration duration) {
 		return barStartTime.plus(duration);
 	}
 
-	public static String getBarSeriesName(AggregationType aggregationType, InstrumentIndicators indicator,
-			boolean isHA) {
+	public static String getBarSeriesName(AggregationType aggregationType,
+			InstrumentIndicators indicator, boolean isHA) {
 		StringBuilder builder = new StringBuilder();
 		if (isHA) {
 			builder.append("ha-");
@@ -65,19 +63,24 @@ public class BarSeriesUtil {
 		return builder.toString().toUpperCase();
 	}
 
-	public static void updateBarSeries(BarSeriesWrapper barSeriesWrapper, InstrumentIndicators instrumentIndicators,
+	public static void updateBarSeries(BarSeriesWrapper barSeriesWrapper,
+			InstrumentIndicators instrumentIndicators,
 			AggregationType aggregationType) {
 		updateBarSeries(barSeriesWrapper.getSeries(), instrumentIndicators, aggregationType, false);
-		updateBarSeries(barSeriesWrapper.getHaSeries(), instrumentIndicators, aggregationType, true);
+		updateBarSeries(barSeriesWrapper.getHaSeries(), instrumentIndicators, aggregationType,
+				true);
 	}
 
-	public static void updateBarSeries(BarSeries barSeries, InstrumentIndicators instrumentIndicators,
+	public static void updateBarSeries(BarSeries barSeries,
+			InstrumentIndicators instrumentIndicators,
 			AggregationType aggregationType, boolean isHA) {
-		ZonedDateTime startTime = BarSeriesUtil.getStartTime(instrumentIndicators.getTickTime());
-		ZonedDateTime endTime = BarSeriesUtil.getEndTime(startTime, aggregationType);
+		Instant startTime = BarSeriesUtil.getStartTime(instrumentIndicators.getTickTime());
+		Instant endTime = BarSeriesUtil.getEndTime(startTime, aggregationType);
 		if (barSeries.getBarCount() > 0) {
-			LOGGER.trace("{} : type : {}, Bar Count = {}, isHA = {}, startTime = {}, endTime = {}, series endTime = {}",
-					instrumentIndicators.getName(), aggregationType.getName(), barSeries.getBarCount(), isHA, startTime,
+			LOGGER.trace(
+					"{} : type : {}, Bar Count = {}, isHA = {}, startTime = {}, endTime = {}, series endTime = {}",
+					instrumentIndicators.getName(), aggregationType.getName(), barSeries
+							.getBarCount(), isHA, startTime,
 					endTime, barSeries.getLastBar().getEndTime());
 		}
 
@@ -91,20 +94,39 @@ public class BarSeriesUtil {
 						barSeries.getName(), barSeries.getLastBar().getEndTime(), endTime);
 			} else {
 				if (isHA) {
-					barSeries.addBar(Duration.ofSeconds(aggregationType.getDuration()), endTime,
-							instrumentIndicators.getHaOpenPrice(), instrumentIndicators.getHaHighPrice(),
-							instrumentIndicators.getHaLowPrice(), instrumentIndicators.getHaClosePrice(),
-							instrumentIndicators.getVolumeTraded());
+					// TODO: What is amount and total trades
+					Bar bar = new BaseBar(
+							Duration.ofSeconds(aggregationType.getDuration()),
+							startTime,
+							endTime,
+							barSeries.numFactory().numOf(instrumentIndicators.getHaOpenPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getHaHighPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getHaLowPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getHaClosePrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getVolumeTraded()),
+							barSeries.numFactory().numOf(instrumentIndicators.getVolumeTraded()),
+							0L);
+					barSeries.addBar(bar, false);
 				} else {
-					barSeries.addBar(Duration.ofSeconds(aggregationType.getDuration()), endTime,
-							instrumentIndicators.getOpenPrice(), instrumentIndicators.getHighPrice(),
-							instrumentIndicators.getLowPrice(), instrumentIndicators.getClosePrice(),
-							instrumentIndicators.getVolumeTraded());
+					Bar bar = new BaseBar(
+							Duration.ofSeconds(aggregationType.getDuration()),
+							startTime,
+							endTime,
+							barSeries.numFactory().numOf(instrumentIndicators.getOpenPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getHighPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getLowPrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getClosePrice()),
+							barSeries.numFactory().numOf(instrumentIndicators.getVolumeTraded()),
+							barSeries.numFactory().numOf(instrumentIndicators.getVolumeTraded()),
+							0L);
+					barSeries.addBar(bar, false);
 				}
 			}
 		} catch (Exception e) {
-			LOGGER.error("{} : type : {}, Bar Count = {}, isHA = {}, startTime = {}, endTime = {}, series endTime = {}",
-					instrumentIndicators.getName(), aggregationType.getName(), barSeries.getBarCount(), isHA, startTime,
+			LOGGER.error(
+					"{} : type : {}, Bar Count = {}, isHA = {}, startTime = {}, endTime = {}, series endTime = {}",
+					instrumentIndicators.getName(), aggregationType.getName(), barSeries
+							.getBarCount(), isHA, startTime,
 					endTime, barSeries.getLastBar().getEndTime(), e);
 		}
 	}
@@ -126,38 +148,50 @@ public class BarSeriesUtil {
 		}
 
 		if (skipCount > 0) {
-			instrumentIndicatorList = instrumentIndicatorList.stream().skip(skipCount).collect(Collectors.toList());
+			instrumentIndicatorList = instrumentIndicatorList.stream().skip(skipCount).toList();
 		}
 
 		return instrumentIndicatorList;
 	}
 
-	private static boolean isSampleMissing(InstrumentIndicators firstSample, InstrumentIndicators secondSample,
+	private static boolean isSampleMissing(InstrumentIndicators firstSample,
+			InstrumentIndicators secondSample,
 			AggregationType aggregationType) {
 		if (isLastSampleOfTheDay(firstSample, aggregationType)) {
 			// Current sample is the last of the day
 			if (isFirstSampleOfTheDay(secondSample, aggregationType)) {
 				// Current sample is the last of the day and the next is the first of the day
-				if (!isMarketHolidayBetweenTwoTicks(firstSample.getTickTime(), secondSample.getTickTime())) {
+				if (!isMarketHolidayBetweenTwoTicks(firstSample.getTickTime(), secondSample
+						.getTickTime())) {
 					// There is a working day in between and missing samples
-					LOGGER.error("MISSING SAMPLES: Current sample is the last of the day and next is the first " +
-							"of the day, but there is a working day in between {} :: {}", firstSample.getTickTime(),
+					LOGGER.error(
+							"MISSING SAMPLES: Current sample is the last of the day and next is the first "
+									+
+									"of the day, but there is a working day in between {} :: {}",
+							firstSample.getTickTime(),
 							secondSample.getTickTime());
 					return true;
 				}
 			} else {
 				// Current sample is the last of the day and next is not the first of the day
-				LOGGER.error("MISSING SAMPLES: Current sample is the last of the day, next is not the first " +
-						"of the day {} :: {}", firstSample.getTickTime(), secondSample.getTickTime());
+				LOGGER.error(
+						"MISSING SAMPLES: Current sample is the last of the day, next is not the first "
+								+
+								"of the day {} :: {}", firstSample.getTickTime(), secondSample
+										.getTickTime());
 				return true;
 			}
 		} else {
 			// Current sample is not the last of the day
-			long timeDiffInSeconds = (secondSample.getTickTime().getTime() - firstSample.getTickTime().getTime())
+			long timeDiffInSeconds = (secondSample.getTickTime().getTime() - firstSample
+					.getTickTime().getTime())
 					/ 1000;
 			if (timeDiffInSeconds != aggregationType.getDuration()) {
-				LOGGER.error("MISSING SAMPLES: Samples are not continuos, data till {} will be skipped, " +
-						"next tick = {}", firstSample.getTickTime(), secondSample.getTickTime());
+				LOGGER.error(
+						"MISSING SAMPLES: Samples are not continuos, data till {} will be skipped, "
+								+
+								"next tick = {}", firstSample.getTickTime(), secondSample
+										.getTickTime());
 				return true;
 			}
 		}
@@ -167,7 +201,8 @@ public class BarSeriesUtil {
 
 	private static boolean isFirstSampleOfTheDay(InstrumentIndicators instrumentIndicator,
 			AggregationType aggregationType) {
-		ZonedDateTime dateTime = ZonedDateTime.ofInstant(instrumentIndicator.getTickTime().toInstant(),
+		ZonedDateTime dateTime = ZonedDateTime.ofInstant(instrumentIndicator.getTickTime()
+				.toInstant(),
 				ZoneId.systemDefault());
 		switch (aggregationType.getName()) {
 		case SignalGeneratorConstants.ONE_DAY:
@@ -181,7 +216,8 @@ public class BarSeriesUtil {
 
 	private static boolean isLastSampleOfTheDay(InstrumentIndicators instrumentIndicator,
 			AggregationType aggregationType) {
-		ZonedDateTime dateTime = ZonedDateTime.ofInstant(instrumentIndicator.getTickTime().toInstant(),
+		ZonedDateTime dateTime = ZonedDateTime.ofInstant(instrumentIndicator.getTickTime()
+				.toInstant(),
 				ZoneId.systemDefault());
 		switch (aggregationType.getName()) {
 		case SignalGeneratorConstants.ONE_DAY:
@@ -189,7 +225,8 @@ public class BarSeriesUtil {
 		case SignalGeneratorConstants.ONE_HOUR:
 			return dateTime.getHour() == 15 && dateTime.getMinute() == 0;
 		default:
-			return dateTime.getHour() == 15 && dateTime.getMinute() == (30 - (aggregationType.getDuration() / 60));
+			return dateTime.getHour() == 15 && dateTime.getMinute() == (30 - (aggregationType
+					.getDuration() / 60));
 		}
 	}
 
@@ -201,7 +238,8 @@ public class BarSeriesUtil {
 				ZoneId.systemDefault()).truncatedTo(ChronoUnit.DAYS);
 
 		firstSampleDay = firstSampleDay.plusDays(1);
-		return (!firstSampleDay.equals(secondSampleDay) && !MarketTimeUtil.isHoliday(firstSampleDay));
+		return (!firstSampleDay.equals(secondSampleDay) && !MarketTimeUtil.isHoliday(
+				firstSampleDay));
 	}
 
 }

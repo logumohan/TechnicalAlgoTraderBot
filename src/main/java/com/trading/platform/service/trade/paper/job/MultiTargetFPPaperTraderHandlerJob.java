@@ -2,7 +2,6 @@ package com.trading.platform.service.trade.paper.job;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.trading.platform.persistence.entity.InstrumentIndicators;
 import com.trading.platform.persistence.entity.InstrumentSubscription;
@@ -75,7 +74,7 @@ public class MultiTargetFPPaperTraderHandlerJob extends AbstractMultiTargetFixed
 
 	private void handlePositions() {
 		List<PositionInfo> positionInfoList = getTradeInfo().getPositionInfoList().stream().filter(
-				PositionInfo::isActive).collect(Collectors.toList());
+				PositionInfo::isActive).toList();
 		for (PositionInfo positionInfo : positionInfoList) {
 			if (isStopLossHit(positionInfo)) {
 				if (getOptionLastTradedPrice() <= positionInfo.getOptionEntryPrice()) {

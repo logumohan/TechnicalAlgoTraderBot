@@ -182,7 +182,7 @@ public abstract class AbstractMultiTargetFixedTSLLiveTradeHandler extends Abstra
 
 	private void markPositionExit(Order order, double optionExitLtp) {
 		List<PositionInfo> positionInfoList = getTradeInfo().getPositionInfoList().stream().filter(
-				PositionInfo::isActive).collect(Collectors.toList());
+				PositionInfo::isActive).toList();
 		for (PositionInfo positionInfo : positionInfoList) {
 			if (positionInfo.isActive()) {
 				markExit(positionInfo, getLastTradedPrice(), optionExitLtp,

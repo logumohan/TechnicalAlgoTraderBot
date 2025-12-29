@@ -8,8 +8,8 @@ import org.apache.logging.log4j.Logger;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
-import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
+import org.ta4j.core.indicators.averages.EMAIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.rules.BooleanRule;
 import org.ta4j.core.rules.CrossedDownIndicatorRule;
@@ -51,7 +51,7 @@ public class HAMACDOptionsBuyStrategy extends SignalStrategy {
 		this.closePrice = new ClosePriceIndicator(series);
 		this.macd = new MACDIndicator(closePrice, MACD_SHORT_EMA_BAR_COUNT, MACD_LONG_EMA_BAR_COUNT);
 		this.signal = new EMAIndicator(macd, MACD_SIGNAL_EMA_BAR_COUNT);
-		this.colorIndicator = new MACDHistogramColorIndicator(macd, signal);
+		this.colorIndicator = new MACDHistogramColorIndicator(macd, signal, series);
 		this.decimalFormat = new DecimalFormat("0.00");
 		this.decimalFormat.setRoundingMode(RoundingMode.HALF_EVEN);
 

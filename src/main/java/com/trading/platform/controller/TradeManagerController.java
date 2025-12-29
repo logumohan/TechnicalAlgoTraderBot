@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,12 +20,19 @@ import org.springframework.web.bind.annotation.RestController;
 import com.trading.platform.LogExecutionTime;
 import com.trading.platform.controller.dto.SignalDto;
 import com.trading.platform.controller.dto.TradeDto;
+import com.trading.platform.persistence.AggregationTypeRepository;
+import com.trading.platform.persistence.IndicatorsRepository;
 import com.trading.platform.persistence.SubscriptionReadOnlyRepositoryIf;
 import com.trading.platform.persistence.TradeInfoRepository;
+import com.trading.platform.persistence.entity.AggregationType;
+import com.trading.platform.persistence.entity.InstrumentIndicators;
 import com.trading.platform.persistence.entity.InstrumentSubscription;
 import com.trading.platform.persistence.entity.Signal;
 import com.trading.platform.persistence.entity.Trade;
+import com.trading.platform.service.series.BarSeriesWrapper;
 import com.trading.platform.service.trade.TradeManager;
+import com.trading.platform.trading.indicator.MarketTrendInfo;
+import com.trading.platform.util.SignalGeneratorUtil;
 
 @RestController
 public class TradeManagerController {
@@ -42,9 +48,16 @@ public class TradeManagerController {
 	@Autowired
 	private SubscriptionReadOnlyRepositoryIf subscriptionRepository;
 
+	@Autowired
+	private AggregationTypeRepository aggregationTypeRepository;
+
+	@Autowired
+	private IndicatorsRepository indicatorsRepository;
+
 	@PostMapping("/live-trade/{allow-trade}")
 	@LogExecutionTime
-	public ResponseEntity<String> allowLiveTrade(@PathVariable(name = "allow-trade") boolean allowTrade) {
+	public ResponseEntity<String> allowLiveTrade(
+			@PathVariable(name = "allow-trade") boolean allowTrade) {
 		tradeManager.setAllowLiveTrade(allowTrade);
 		LOGGER.info("Live Trade is set to {}", allowTrade);
 
@@ -53,7 +66,8 @@ public class TradeManagerController {
 
 	@PostMapping("/paper-trade/{allow-trade}")
 	@LogExecutionTime
-	public ResponseEntity<String> allowPaperTrade(@PathVariable(name = "allow-trade") boolean allowTrade) {
+	public ResponseEntity<String> allowPaperTrade(
+			@PathVariable(name = "allow-trade") boolean allowTrade) {
 		tradeManager.setAllowPaperTrade(allowTrade);
 		LOGGER.info("Paper Trade is set to {}", allowTrade);
 
@@ -71,12 +85,13 @@ public class TradeManagerController {
 			List<Long> tokens = subscriptionRepository.getAllTokens();
 			LOGGER.info("List of tokens subscribed - {}", tokens);
 			for (Long subscribedToken : tokens) {
-				LOGGER.info("Attempting to fetch historical trades for the token - {}", subscribedToken);
+				LOGGER.info("Attempting to fetch historical trades for the token - {}",
+						subscribedToken);
 				tradeList.addAll(tradeRepository.findHistoricalTrades(subscribedToken, true));
 				LOGGER.info("Historical trades for token - {}, {}", subscribedToken, tradeList);
 			}
 		}
-		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).collect(Collectors.toList()),
+		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).toList(),
 				HttpStatus.OK);
 	}
 
@@ -91,12 +106,13 @@ public class TradeManagerController {
 			List<Long> tokens = subscriptionRepository.getAllTokens();
 			LOGGER.info("List of tokens subscribed - {}", tokens);
 			for (Long subscribedToken : tokens) {
-				LOGGER.info("Attempting to fetch historical trades for the token - {}", subscribedToken);
+				LOGGER.info("Attempting to fetch historical trades for the token - {}",
+						subscribedToken);
 				tradeList.addAll(tradeRepository.findHistoricalTrades(subscribedToken, false));
 				LOGGER.info("Historical trades for token - {}, {}", subscribedToken, tradeList);
 			}
 		}
-		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).collect(Collectors.toList()),
+		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).toList(),
 				HttpStatus.OK);
 	}
 
@@ -107,7 +123,7 @@ public class TradeManagerController {
 			@PathVariable(name = "trade-status", required = false) Optional<String> tradeStatus) {
 		List<Trade> tradeList = getTradesByType(tradeType, tradeStatus);
 
-		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).collect(Collectors.toList()),
+		return new ResponseEntity<>(tradeList.stream().map(TradeDto::of).toList(),
 				HttpStatus.OK);
 	}
 
@@ -153,7 +169,8 @@ public class TradeManagerController {
 			@PathVariable(name = "trade-id", required = false) Optional<String> tradeId) {
 		if (tradeId.isPresent()) {
 			tradeManager.squareOffLiveTradeById(tradeId.get());
-			return new ResponseEntity<>("Squared off live trade with id - " + tradeId.get(), HttpStatus.OK);
+			return new ResponseEntity<>("Squared off live trade with id - " + tradeId.get(),
+					HttpStatus.OK);
 		} else {
 			tradeManager.squareOffLiveTrades();
 			return new ResponseEntity<>("Squared off all live trades", HttpStatus.OK);
@@ -166,7 +183,8 @@ public class TradeManagerController {
 			@PathVariable(name = "trade-id", required = false) Optional<String> tradeId) {
 		if (tradeId.isPresent()) {
 			tradeManager.squareOffPaperTradeById(tradeId.get());
-			return new ResponseEntity<>("Squared off paper trade with id - " + tradeId.get(), HttpStatus.OK);
+			return new ResponseEntity<>("Squared off paper trade with id - " + tradeId.get(),
+					HttpStatus.OK);
 		} else {
 			tradeManager.squareOffPaperTrades();
 			return new ResponseEntity<>("Squared off all paper trades", HttpStatus.OK);
@@ -178,7 +196,8 @@ public class TradeManagerController {
 	public ResponseEntity<String> placeOrder(@RequestBody SignalDto signalDto) {
 		LOGGER.info("Attempting to send signal to trade manager, signal - {}", signalDto);
 
-		InstrumentSubscription subscription = subscriptionRepository.getByToken(signalDto.getToken());
+		InstrumentSubscription subscription = subscriptionRepository.getByToken(signalDto
+				.getToken());
 
 		Signal signal = new Signal();
 		signal.setTickTime(new Date());
@@ -192,10 +211,25 @@ public class TradeManagerController {
 		signal.setAverageTrueRange(signalDto.getAverageTrueRange());
 		signal.setStrategy(signalDto.getStrategy());
 
-		LOGGER.info("Sending the signal to trade manager, signal- {}", signal);
-		tradeManager.handleSignal(signal, subscription, null);
+		Optional<AggregationType> aggregationType = aggregationTypeRepository.findAll().stream()
+				.filter(AggregationType::isAggregable)
+				.filter(type -> type.getName().equalsIgnoreCase(signal.getAggregationType()))
+				.findFirst();
+		if (aggregationType.isPresent()) {
+			InstrumentIndicators lastIndicator = indicatorsRepository.findLast(
+					SignalGeneratorUtil.getIndicatorClazz(aggregationType.get()),
+					signal.getToken());
 
-		return new ResponseEntity<>("Order Placed", HttpStatus.OK);
+			BarSeriesWrapper wrapper = new BarSeriesWrapper(aggregationType.get(), lastIndicator);
+			MarketTrendInfo trendInfo = new MarketTrendInfo(wrapper.getSeries());
+
+			LOGGER.info("Sending the signal to trade manager, signal- {}", signal);
+			tradeManager.handleSignal(trendInfo, signal, subscription, null);
+
+			return new ResponseEntity<>("Order Placed", HttpStatus.OK);
+		} else {
+			return new ResponseEntity<>("Order Failed", HttpStatus.BAD_REQUEST);
+		}
 	}
 
 }

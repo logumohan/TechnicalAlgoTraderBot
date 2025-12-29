@@ -2,14 +2,12 @@ package com.trading.platform.service.trade;
 
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -116,7 +114,7 @@ public abstract class TradeManagerTelegramBot extends TelegramLongPollingBot {
 
 	public void publishPositionInfo(String message, List<PositionInfo> positionInfoList) {
 		List<Position> positionList = positionInfoList.stream().map(TradeUtil::convertToPosition)
-				.collect(Collectors.toList());
+				.toList();
 		String jsonPayload = convertPositionToJson(positionList);
 		sendMessageToChannel(formatMessage(message, jsonPayload));
 	}
@@ -188,7 +186,7 @@ public abstract class TradeManagerTelegramBot extends TelegramLongPollingBot {
 	}
 
 	protected String convertTradesToJson(List<Trade> trades) {
-		List<TradeDto> tradesList = trades.stream().map(TradeDto::of).collect(Collectors.toList());
+		List<TradeDto> tradesList = trades.stream().map(TradeDto::of).toList();
 		try {
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.withoutAttribute(TOKEN_PARAM)
@@ -230,7 +228,7 @@ public abstract class TradeManagerTelegramBot extends TelegramLongPollingBot {
 	}
 
 	protected String convertPositionToJson(List<Position> positions) {
-		List<PositionDto> positionDtoList = positions.stream().map(PositionDto::of).collect(Collectors.toList());
+		List<PositionDto> positionDtoList = positions.stream().map(PositionDto::of).toList();
 		try {
 			return objectMapper.writerWithDefaultPrettyPrinter()
 					.withoutAttribute(QUANTITY_PARAM)

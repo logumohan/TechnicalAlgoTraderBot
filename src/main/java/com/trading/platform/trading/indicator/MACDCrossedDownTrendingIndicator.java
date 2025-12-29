@@ -26,7 +26,8 @@ public class MACDCrossedDownTrendingIndicator extends CachedIndicator<Boolean> {
 	protected Boolean calculate(int index) {
 		if (index > 0) {
 			for (int barIndex = Math.max(0, index - barCount) + 1; barIndex <= index; barIndex++) {
-				if (indicator.getValue(barIndex).isGreaterThanOrEqual(indicator.getValue(barIndex - 1))) {
+				if (indicator.getValue(barIndex).isGreaterThanOrEqual(indicator.getValue(barIndex
+						- 1))) {
 					return false;
 				}
 			}
@@ -36,8 +37,7 @@ public class MACDCrossedDownTrendingIndicator extends CachedIndicator<Boolean> {
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 

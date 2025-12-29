@@ -22,6 +22,9 @@ public class JobsDto implements Serializable {
 
 	@JsonProperty("strategy")
 	private String strategy;
+	
+	@JsonProperty("market-type")
+	private String marketType;
 
 	@JsonProperty("trailing-strategy")
 	private String trailingStrategy;
@@ -65,6 +68,7 @@ public class JobsDto implements Serializable {
 		jobsDto.setUserName(job.getUserName());
 		jobsDto.setJobType(job.getJobType());
 		jobsDto.setStrategy(job.getStrategy());
+		jobsDto.setMarketType(job.getMarketType());
 		jobsDto.setTrailingStrategy(job.getTrailingStrategy());
 		jobsDto.setTrailBy(job.getTrailBy());
 		jobsDto.setAtr(job.getAtr());
@@ -87,6 +91,7 @@ public class JobsDto implements Serializable {
 		job.setUserName(this.getUserName());
 		job.setJobType(this.getJobType());
 		job.setStrategy(this.getStrategy());
+		job.setMarketType(this.getMarketType());
 		job.setTrailingStrategy(this.getTrailingStrategy());
 		job.setTrailBy(this.getTrailBy());
 		job.setAtr(this.getAtr());
@@ -117,6 +122,10 @@ public class JobsDto implements Serializable {
 
 	public String getStrategy() {
 		return strategy;
+	}
+	
+	public String getMarketType() {
+		return marketType;
 	}
 
 	public String getTrailingStrategy() {
@@ -182,6 +191,10 @@ public class JobsDto implements Serializable {
 	public void setStrategy(String strategy) {
 		this.strategy = strategy;
 	}
+	
+	public void setMarketType(String marketType) {
+		this.marketType = marketType;
+	}
 
 	public void setTrailingStrategy(String trialingStrategy) {
 		this.trailingStrategy = trialingStrategy;
@@ -242,6 +255,8 @@ public class JobsDto implements Serializable {
 		builder.append(jobType);
 		builder.append(", strategy=");
 		builder.append(strategy);
+		builder.append(", marketType=");
+		builder.append(marketType);
 		builder.append(", trialingStrategy=");
 		builder.append(trailingStrategy);
 		builder.append(", trailBy=");

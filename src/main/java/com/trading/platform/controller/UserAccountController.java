@@ -1,7 +1,6 @@
 package com.trading.platform.controller;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -110,7 +109,7 @@ public class UserAccountController {
 	public ResponseEntity<List<UserAccountDto>> getAllUserAccounts() {
 		List<UserAccount> userAccountList = userRepository.getAllUserAccount();
 
-		return new ResponseEntity<>(userAccountList.stream().map(UserAccountDto::of).collect(Collectors.toList()),
+		return new ResponseEntity<>(userAccountList.stream().map(UserAccountDto::of).toList(),
 				HttpStatus.OK);
 	}
 
@@ -119,7 +118,7 @@ public class UserAccountController {
 	public ResponseEntity<List<UserAccountDto>> getAllTradableUserAccounts() {
 		List<UserAccount> userAccountList = userRepository.getAllTradableUserAccount();
 
-		return new ResponseEntity<>(userAccountList.stream().map(UserAccountDto::of).collect(Collectors.toList()),
+		return new ResponseEntity<>(userAccountList.stream().map(UserAccountDto::of).toList(),
 				HttpStatus.OK);
 	}
 

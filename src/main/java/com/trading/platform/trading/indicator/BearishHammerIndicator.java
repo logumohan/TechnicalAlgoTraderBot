@@ -7,8 +7,11 @@ import org.ta4j.core.num.Num;
 
 public class BearishHammerIndicator extends CachedIndicator<Boolean> {
 
+	private BarSeries series;
+
 	public BearishHammerIndicator(BarSeries series) {
 		super(series);
+		this.series = series;
 	}
 
 	@Override
@@ -19,15 +22,16 @@ public class BearishHammerIndicator extends CachedIndicator<Boolean> {
 		Num shadowBottom = bar.getOpenPrice().minus(bar.getLowPrice());
 		Num shadowRatio = shadowTop.dividedBy(body);
 		Num hammerRatio = shadowBottom.dividedBy(body);
-		
-		return body.isGreaterThan(numOf(0)) && shadowTop.isGreaterThan(numOf(2).multipliedBy(body))
-				&& shadowBottom.isLessThanOrEqual(body) && shadowRatio.isGreaterThanOrEqual(numOf(2))
-				&& hammerRatio.isLessThanOrEqual(numOf(1));
+
+		return body.isGreaterThan(series.numFactory().numOf(0))
+				&& shadowTop.isGreaterThan(series.numFactory().numOf(2).multipliedBy(body))
+				&& shadowBottom.isLessThanOrEqual(body) && shadowRatio.isGreaterThanOrEqual(series
+						.numFactory().numOf(2))
+				&& hammerRatio.isLessThanOrEqual(series.numFactory().numOf(1));
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 

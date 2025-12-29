@@ -14,10 +14,13 @@ public class HLC3Indicator extends CachedIndicator<Num> {
 	private LowPriceIndicator lowPrice;
 
 	private ClosePriceIndicator closePrice;
+	
+	private BarSeries series;
 
 	public HLC3Indicator(BarSeries series) {
 		super(series);
 
+		this.series = series;
 		this.highPrice = new HighPriceIndicator(series);
 		this.lowPrice = new LowPriceIndicator(series);
 		this.closePrice = new ClosePriceIndicator(series);
@@ -26,12 +29,11 @@ public class HLC3Indicator extends CachedIndicator<Num> {
 	@Override
 	protected Num calculate(int index) {
 		Num total = highPrice.getValue(index).plus(lowPrice.getValue(index)).plus(closePrice.getValue(index));
-		return total.dividedBy(numOf(3));
+		return total.dividedBy(series.numFactory().numOf(3));
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 

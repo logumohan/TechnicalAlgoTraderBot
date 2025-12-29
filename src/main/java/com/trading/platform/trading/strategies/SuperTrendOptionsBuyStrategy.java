@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
-import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.averages.SMAIndicator;
 import org.ta4j.core.indicators.supertrend.SuperTrendIndicator;
 import org.ta4j.core.rules.BooleanRule;
 import org.ta4j.core.rules.CrossedDownIndicatorRule;
@@ -74,10 +74,6 @@ public class SuperTrendOptionsBuyStrategy extends SignalStrategy {
 	private void logEntryAndExitRuleInfo() {
 		if (LOGGER.isInfoEnabled()) {
 			int index = series.getEndIndex();
-			int prevIndex = series.getEndIndex() - 1;
-			if (prevIndex < 0) {
-				prevIndex = index;
-			}
 			LOGGER.info(
 					"getBuyCERule: Bar Name - {}, T1 - {}, T2 - {}, T3 - {}, IMCAD_ZERO - {}, SIGNAL_ZERO - {}",
 					series.getName(),

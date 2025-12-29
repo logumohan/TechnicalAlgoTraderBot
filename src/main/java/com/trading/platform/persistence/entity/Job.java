@@ -22,6 +22,7 @@ import jakarta.persistence.Table;
  * JOB_TYPE TEXT NOT NULL CHECK (JOB_TYPE = 'ATR_TSL' OR JOB_TYPE = 'FIXED_TSL'
  * OR JOB_TYPE = 'FIXED_PROFIT'),
  * STRATEGY TEXT,
+ * MARKET_TYPE TEXT,
  * TRAILING_STRATEGY TEXT NOT NULL CHECK (TRAILING_STRATEGY = 'DEFAULT' OR TRAILING_STRATEGY = 'SIMPLE' 
  * 		OR TRAILING_STRATEGY = 'PROTECTIVE' OR TRAILING_STRATEGY = 'AGGRESSIVE' OR TRAILING_STRATEGY = 'CUSTOM1'
  * 		OR TRAILING_STRATEGY = 'MULTI_TARGET'),
@@ -70,6 +71,9 @@ public class Job implements Serializable {
 	@Column(name = "STRATEGY")
 	private String strategy;
 
+	@Column(name = "MARKET_TYPE")
+	private String marketType;
+	
 	@Column(name = "TRAILING_STRATEGY")
 	private String trailingStrategy;
 
@@ -122,6 +126,10 @@ public class Job implements Serializable {
 
 	public String getStrategy() {
 		return strategy;
+	}
+	
+	public String getMarketType() {
+		return marketType;
 	}
 
 	public String getTrailingStrategy() {
@@ -187,6 +195,10 @@ public class Job implements Serializable {
 	public void setStrategy(String strategy) {
 		this.strategy = strategy;
 	}
+	
+	public void setMarketType(String marketType) {
+		this.marketType = marketType;
+	}
 
 	public void setTrailingStrategy(String trailingStrategy) {
 		this.trailingStrategy = trailingStrategy;
@@ -247,6 +259,8 @@ public class Job implements Serializable {
 		builder.append(jobType);
 		builder.append(", strategy=");
 		builder.append(strategy);
+		builder.append(", marketType=");
+		builder.append(marketType);
 		builder.append(", trailingStrategy=");
 		builder.append(trailingStrategy);
 		builder.append(", trailBy=");

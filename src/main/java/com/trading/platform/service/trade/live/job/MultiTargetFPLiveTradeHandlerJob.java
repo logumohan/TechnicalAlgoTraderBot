@@ -2,7 +2,6 @@ package com.trading.platform.service.trade.live.job;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.trading.platform.persistence.entity.InstrumentIndicators;
 import com.trading.platform.persistence.entity.InstrumentSubscription;
@@ -97,7 +96,7 @@ public class MultiTargetFPLiveTradeHandlerJob extends AbstractMultiTargetFixedTS
 
 	private void handlePositions() {
 		List<PositionInfo> positionInfoList = getTradeInfo().getPositionInfoList().stream().filter(
-				PositionInfo::isActive).collect(Collectors.toList());
+				PositionInfo::isActive).toList();
 		for (PositionInfo positionInfo : positionInfoList) {
 			if (isStopLossHit(positionInfo)) {
 				if (getOptionLastTradedPrice() <= positionInfo.getOptionEntryPrice()) {
@@ -131,7 +130,7 @@ public class MultiTargetFPLiveTradeHandlerJob extends AbstractMultiTargetFixedTS
 		while (isActive()) {
 			if (isSquareOff() || MarketTimeUtil.getSquareOffTime().toLocalDateTime().isBefore(LocalDateTime.now())) {
 				List<PositionInfo> positionInfoList = getTradeInfo().getPositionInfoList().stream()
-						.filter(PositionInfo::isActive).collect(Collectors.toList());
+						.filter(PositionInfo::isActive).toList();
 				squareOff();
 				getTradeManager().publishPositionInfo("Squareoff", positionInfoList);
 				break;

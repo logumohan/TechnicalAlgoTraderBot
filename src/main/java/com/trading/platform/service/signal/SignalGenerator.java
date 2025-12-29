@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.logging.log4j.CloseableThreadContext;
@@ -16,6 +17,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.Async;
 
 import com.trading.platform.LogExecutionTime;
+import com.trading.platform.persistence.AggregationTypeRepository;
 import com.trading.platform.persistence.SignalRepository;
 import com.trading.platform.persistence.SubscriptionReadOnlyRepositoryIf;
 import com.trading.platform.persistence.entity.AggregationType;
@@ -25,6 +27,7 @@ import com.trading.platform.persistence.entity.Signal;
 import com.trading.platform.service.LiveTicksConsumer;
 import com.trading.platform.service.series.BarSeriesWrapper;
 import com.trading.platform.service.trade.TradeManager;
+import com.trading.platform.trading.indicator.MarketTrendInfo;
 import com.trading.platform.trading.strategies.HAMACDOptionsBuyStrategy;
 import com.trading.platform.trading.strategies.IMACDOptionsBuyStrategy;
 import com.trading.platform.trading.strategies.MACDOptionsBuyStrategy;
@@ -41,6 +44,9 @@ public abstract class SignalGenerator {
 
 	@Autowired
 	private SubscriptionReadOnlyRepositoryIf subscriptionRepository;
+
+	@Autowired
+	private AggregationTypeRepository aggregationTypeRepository;
 
 	@Autowired
 	private TradeManager tradeManager;
@@ -67,22 +73,31 @@ public abstract class SignalGenerator {
 
 	@LogExecutionTime
 	@Async(value = "signal-generator")
-	public void addSeries(BarSeriesWrapper barSeriesWrapper, InstrumentIndicators instrumentIndicators,
+	public void addSeries(BarSeriesWrapper barSeriesWrapper,
+			InstrumentIndicators instrumentIndicators,
 			AggregationType aggregationType) {
 		try (CloseableThreadContext.Instance context = CloseableThreadContext
 				.put("instrument-name", instrumentIndicators.getName().toUpperCase())
 				.put("token", String.valueOf(instrumentIndicators.getToken()))
 				.put("duration", aggregationType.getName())) {
-			InstrumentSubscription subscription = subscriptionRepository.getByToken(instrumentIndicators.getToken());
+			InstrumentSubscription subscription = subscriptionRepository.getByToken(
+					instrumentIndicators.getToken());
+
+			MarketTrendInfo trendInfo = new MarketTrendInfo(barSeriesWrapper.getSeries());
+			LOGGER.info("Market Trend Info - {}", trendInfo);
 
 			List<SignalStrategy> strategyList = new LinkedList<>();
-			strategyList.add(new MACDOptionsBuyStrategy(barSeriesWrapper, subscription, instrumentIndicators));
-			strategyList.add(new IMACDOptionsBuyStrategy(barSeriesWrapper, subscription, instrumentIndicators));
+			strategyList.add(new MACDOptionsBuyStrategy(barSeriesWrapper, subscription,
+					instrumentIndicators));
+			strategyList.add(new IMACDOptionsBuyStrategy(barSeriesWrapper, subscription,
+					instrumentIndicators));
 			strategyList.add(new HAMACDOptionsBuyStrategy(barSeriesWrapper));
-			strategyList.add(new SuperTrendOptionsBuyStrategy(barSeriesWrapper, instrumentIndicators));
+			strategyList.add(new SuperTrendOptionsBuyStrategy(barSeriesWrapper,
+					instrumentIndicators));
 
 			for (SignalStrategy strategy : strategyList) {
-				applyStrategy(strategy, instrumentIndicators, subscription, aggregationType);
+				applyStrategy(trendInfo, strategy, instrumentIndicators, subscription,
+						aggregationType);
 			}
 		}
 		previousIndicatorMap.put(instrumentIndicators.getToken(), instrumentIndicators);
@@ -90,16 +105,25 @@ public abstract class SignalGenerator {
 
 	@LogExecutionTime
 	@Async(value = "signal-generator")
-	public void applyStrategy(SignalStrategy strategy, InstrumentIndicators instrumentIndicators,
+	public void applyStrategy(MarketTrendInfo trendInfo, SignalStrategy strategy,
+			InstrumentIndicators instrumentIndicators,
 			InstrumentSubscription subscription, AggregationType aggregationType) {
 		if (strategy.shouldBuyCE()) {
-			generateSignal(instrumentIndicators, subscription, aggregationType, OptionType.BUY_CE, strategy);
+			generateSignal(trendInfo, instrumentIndicators, subscription, aggregationType,
+					OptionType.BUY_CE,
+					strategy);
 		} else if (strategy.shouldBuyPE()) {
-			generateSignal(instrumentIndicators, subscription, aggregationType, OptionType.BUY_PE, strategy);
+			generateSignal(trendInfo, instrumentIndicators, subscription, aggregationType,
+					OptionType.BUY_PE,
+					strategy);
 		} else if (strategy.shouldSellCE()) {
-			generateSignal(instrumentIndicators, subscription, aggregationType, OptionType.SELL_CE, strategy);
+			generateSignal(trendInfo, instrumentIndicators, subscription, aggregationType,
+					OptionType.SELL_CE,
+					strategy);
 		} else if (strategy.shouldSellPE()) {
-			generateSignal(instrumentIndicators, subscription, aggregationType, OptionType.SELL_PE, strategy);
+			generateSignal(trendInfo, instrumentIndicators, subscription, aggregationType,
+					OptionType.SELL_PE,
+					strategy);
 		} else {
 			LOGGER.info("{}: Signal Generator: addSeries: NO_SIGNAL: {}", strategy.getName(),
 					instrumentIndicators.getName());
@@ -115,26 +139,40 @@ public abstract class SignalGenerator {
 		}
 		if (signal.getOptionSymbol() != null) {
 			repository.save(signal);
-			LOGGER.info("{}: Signal Generator: generateSignal: {}: {}", signal.getStrategy(), signal.getTradeSignal(), signal);
+			LOGGER.info("{}: Signal Generator: generateSignal: {}: {}", signal.getStrategy(), signal
+					.getTradeSignal(), signal);
 
-			tradeManager.handleSignal(signal, subscription, indicator);
+			Optional<AggregationType> aggregationType = aggregationTypeRepository.findAll().stream()
+					.filter(AggregationType::isAggregable)
+					.filter(type -> type.getName().equalsIgnoreCase(signal.getAggregationType()))
+					.findFirst();
+			if (aggregationType.isPresent()) {
+				BarSeriesWrapper wrapper = new BarSeriesWrapper(aggregationType.get(), indicator);
+				MarketTrendInfo trendInfo = new MarketTrendInfo(wrapper.getSeries());
+				tradeManager.handleSignal(trendInfo, signal, subscription, indicator);
+			}
 		} else {
 			LOGGER.error("{}: Unable to save the signal - {}", signal.getStrategy(), signal);
 		}
 	}
 
-	private void generateSignal(InstrumentIndicators instrumentIndicators, InstrumentSubscription subscription,
-			AggregationType aggregationType, OptionType optionType, SignalStrategy strategy) {
-		Signal signal = getSignal(instrumentIndicators, aggregationType, optionType, strategy);
+	private void generateSignal(MarketTrendInfo trendInfo,
+			InstrumentIndicators instrumentIndicators,
+			InstrumentSubscription subscription, AggregationType aggregationType,
+			OptionType optionType, SignalStrategy strategy) {
+		Signal signal = getSignal(instrumentIndicators, aggregationType, optionType,
+				strategy);
 		SignalGeneratorUtil.generateOptionSymbol(signal, optionType, subscription);
 
 		if (signal.getOptionSymbol() != null) {
 			repository.save(signal);
-			LOGGER.info("{}: Signal Generator: generateSignal: {}: {}", strategy.getName(), optionType, signal);
+			LOGGER.info("{}: Signal Generator: generateSignal: {}: {}", strategy.getName(),
+					optionType, signal);
 
-			tradeManager.handleSignal(signal, subscription, instrumentIndicators);
+			tradeManager.handleSignal(trendInfo, signal, subscription, instrumentIndicators);
 		} else {
-			LOGGER.error("{}: Error in generating the option symbol for signal - {}", strategy.getName(), signal);
+			LOGGER.error("{}: Error in generating the option symbol for signal - {}", strategy
+					.getName(), signal);
 		}
 	}
 

@@ -11,7 +11,7 @@ import org.springframework.data.domain.Sort.Direction;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
-import org.ta4j.core.num.DecimalNum;
+import org.ta4j.core.num.DecimalNumFactory;
 
 import com.trading.platform.SignalGeneratorConstants;
 import com.trading.platform.persistence.IndicatorsRepository;
@@ -38,13 +38,13 @@ public class BarSeriesWrapper {
 
 		series = new BaseBarSeriesBuilder()
 				.withName(BarSeriesUtil.getBarSeriesName(aggregationType, indicator, false))
-				.withNumTypeOf(DecimalNum.class)
+				.withNumFactory(DecimalNumFactory.getInstance())
 				.withMaxBarCount(SignalGeneratorConstants.MAX_BAR_COUNT)
 				.build();
 
 		haSeries = new BaseBarSeriesBuilder()
 				.withName(BarSeriesUtil.getBarSeriesName(aggregationType, indicator, true))
-				.withNumTypeOf(DecimalNum.class)
+				.withNumFactory(DecimalNumFactory.getInstance())
 				.withMaxBarCount(SignalGeneratorConstants.MAX_BAR_COUNT)
 				.build();
 	}
@@ -83,7 +83,7 @@ public class BarSeriesWrapper {
 	public String dumpSeries() {
 		return getSeries().getBarData().stream().map((Bar bar) ->
 			String.format("\"%1s\", %2$f, %3$f, %4$f, %5$f, %6$f}",
-				bar.getBeginTime().withZoneSameInstant(ZoneId.systemDefault()),
+				bar.getBeginTime().atZone(ZoneId.systemDefault()),
 				bar.getOpenPrice().doubleValue(),
 				bar.getHighPrice().doubleValue(),
 				bar.getLowPrice().doubleValue(),
@@ -94,7 +94,7 @@ public class BarSeriesWrapper {
 	public String dumpHaSeries() {
 		return getHaSeries().getBarData().stream().map((Bar bar) ->
 			String.format("\"%1s\", %2$f, %3$f, %4$f, %5$f, %6$f}",
-				bar.getBeginTime().withZoneSameInstant(ZoneId.systemDefault()),
+				bar.getBeginTime().atZone(ZoneId.systemDefault()),
 				bar.getOpenPrice().doubleValue(),
 				bar.getHighPrice().doubleValue(),
 				bar.getLowPrice().doubleValue(),

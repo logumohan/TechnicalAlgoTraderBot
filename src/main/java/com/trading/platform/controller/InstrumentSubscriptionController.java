@@ -3,7 +3,6 @@ package com.trading.platform.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,7 +43,7 @@ public class InstrumentSubscriptionController {
 	public ResponseEntity<List<SubscriptionDto>> getSubscriptions() {
 		List<InstrumentSubscription> subscritionList = repository.findAll();
 		
-		List<SubscriptionDto> susbcriptions = subscritionList.stream().map(SubscriptionDto::of).collect(Collectors.toList());
+		List<SubscriptionDto> susbcriptions = subscritionList.stream().map(SubscriptionDto::of).toList();
 		
 		return new ResponseEntity<>(susbcriptions, HttpStatus.OK);
 	}

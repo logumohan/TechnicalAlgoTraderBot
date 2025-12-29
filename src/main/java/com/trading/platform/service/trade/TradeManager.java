@@ -32,6 +32,7 @@ import com.trading.platform.persistence.entity.Trade;
 import com.trading.platform.service.KiteLoginModuleImpl;
 import com.trading.platform.service.kite.KiteSessionService;
 import com.trading.platform.service.signal.OptionType;
+import com.trading.platform.trading.indicator.MarketTrendInfo;
 import com.trading.platform.util.MarketTimeUtil;
 import com.trading.platform.util.TradeUtil;
 import com.zerodhatech.kiteconnect.utils.Constants;
@@ -356,7 +357,7 @@ public class TradeManager extends TradeManagerTelegramBot {
 		return candleTime.isBefore(marketStartTime) || candleTime.isEqual(marketStartTime);
 	}
 
-	public void handleSignal(Signal signal, InstrumentSubscription subscription,
+	public void handleSignal(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			InstrumentIndicators instrumentIndicators) {
 		LOGGER.info("Attempting to place order, signal = {}", signal);
 
@@ -372,18 +373,18 @@ public class TradeManager extends TradeManagerTelegramBot {
 					publishSignal("Signal", signal);
 				}
 			}
-			scheduleTrades(signal, subscription, instrumentIndicators);
+			scheduleTrades(trendInfo, signal, subscription, instrumentIndicators);
 		}
 	}
 
-	private void scheduleTrades(Signal signal, InstrumentSubscription subscription,
+	private void scheduleTrades(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
 			InstrumentIndicators instrumentIndicators) {
 		trendReversalHandler.handleTrendReversalForLiveTrades(signal, subscriptionMap);
 		if (OptionType.BUY_CE.name().equals(signal.getTradeSignal())
 				|| OptionType.BUY_PE.name().equals(signal.getTradeSignal())) {
 			if (isLiveTradeAllowed(signal, subscription)) {
 				try {
-					jobScheduler.scheduleLiveTrades(signal, subscription, this, instrumentIndicators);
+					jobScheduler.scheduleLiveTrades(trendInfo, signal, subscription, this, instrumentIndicators);
 				} catch (Exception e) {
 					LOGGER.error("Error in scheduling live trade, symbol - {}", signal.getOptionSymbol(), e);
 				}
@@ -396,7 +397,7 @@ public class TradeManager extends TradeManagerTelegramBot {
 		if (OptionType.BUY_CE.name().equals(signal.getTradeSignal())
 				|| OptionType.BUY_PE.name().equals(signal.getTradeSignal())) {
 			if (isPaperTradeAllowed(signal, subscription)) {
-				jobScheduler.schedulePaperTrades(signal, subscription, this, instrumentIndicators);
+				jobScheduler.schedulePaperTrades(trendInfo, signal, subscription, this, instrumentIndicators);
 			} else {
 				LOGGER.info("Paper trades is not allowed, skipping signal - {}", signal);
 			}

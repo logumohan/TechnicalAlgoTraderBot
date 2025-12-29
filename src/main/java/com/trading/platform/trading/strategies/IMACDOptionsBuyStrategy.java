@@ -6,7 +6,7 @@ import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Rule;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.ATRIndicator;
-import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.averages.SMAIndicator;
 import org.ta4j.core.num.DecimalNum;
 import org.ta4j.core.rules.BooleanIndicatorRule;
 import org.ta4j.core.rules.BooleanRule;

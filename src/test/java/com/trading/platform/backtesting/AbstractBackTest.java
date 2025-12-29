@@ -7,18 +7,21 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.ZonedDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.BaseBar;
 import org.ta4j.core.Position;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.TradingRecord;
 import org.ta4j.core.backtest.BarSeriesManager;
-import org.ta4j.core.criteria.pnl.ReturnCriterion;
+import org.ta4j.core.criteria.pnl.NetReturnCriterion;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -65,14 +68,35 @@ public abstract class AbstractBackTest implements BackTestInterface {
 			String query = TestUtil.getQuery(token, startTime, endTime, aggregationType.getName());
 			ResultSet result = statement.executeQuery(query);
 			while (result.next()) {
-				ZonedDateTime barStartTime = BarSeriesUtil.getStartTime(result.getString(1),
+				Instant barStartTime = BarSeriesUtil.getStartTime(result.getString(1),
 						CSV_DATE_FORMATTER);
-				series.addBar(BarSeriesUtil.getEndTime(barStartTime, TestUtil.getDuration(aggregationType.getName())),
-						result.getBigDecimal(3), result.getBigDecimal(4), result.getBigDecimal(5),
-						result.getBigDecimal(6), result.getLong(12));
-				haSeries.addBar(BarSeriesUtil.getEndTime(barStartTime, TestUtil.getDuration(aggregationType.getName())),
-						result.getBigDecimal(7), result.getBigDecimal(8), result.getBigDecimal(9),
-						result.getBigDecimal(10), result.getLong(12));
+				Bar bar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    BarSeriesUtil.getEndTime(barStartTime, TestUtil.getDuration(aggregationType.getName())),
+					    series.numFactory().numOf(result.getBigDecimal(3)),
+					    series.numFactory().numOf(result.getBigDecimal(4)),
+					    series.numFactory().numOf(result.getBigDecimal(5)),
+					    series.numFactory().numOf(result.getBigDecimal(6)),
+					    series.numFactory().numOf(result.getBigDecimal(12)),
+					    series.numFactory().numOf(result.getBigDecimal(12)),
+					    0L
+					);
+				series.addBar(bar, true);
+				
+				Bar haBar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    BarSeriesUtil.getEndTime(barStartTime, TestUtil.getDuration(aggregationType.getName())),
+					    series.numFactory().numOf(result.getBigDecimal(7)),
+					    series.numFactory().numOf(result.getBigDecimal(8)),
+					    series.numFactory().numOf(result.getBigDecimal(9)),
+					    series.numFactory().numOf(result.getBigDecimal(10)),
+					    series.numFactory().numOf(result.getBigDecimal(12)),
+					    series.numFactory().numOf(result.getBigDecimal(12)),
+					    0L
+					);
+				haSeries.addBar(haBar, true);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -86,16 +110,37 @@ public abstract class AbstractBackTest implements BackTestInterface {
 			String[] line;
 			reader.readNext(); // skip header
 			while ((line = reader.readNext()) != null) {
-				ZonedDateTime barStartTime = BarSeriesUtil.getStartTime(line[0],
+				Instant barStartTime = BarSeriesUtil.getStartTime(line[0],
 						CSV_DATE_FORMATTER);
-				ZonedDateTime barEndTime = BarSeriesUtil.getEndTime(barStartTime,
+				Instant barEndTime = BarSeriesUtil.getEndTime(barStartTime,
 						TestUtil.getDuration(aggregationType.getName()));
-				series.addBar(barEndTime, Double.valueOf(line[1]),
-						Double.valueOf(line[2]), Double.valueOf(line[3]),
-						Double.valueOf(line[4]));
-				haSeries.addBar(barEndTime, Double.valueOf(line[5]),
-						Double.valueOf(line[6]), Double.valueOf(line[7]),
-						Double.valueOf(line[8]));
+				Bar bar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    barEndTime,
+					    series.numFactory().numOf(Double.valueOf(line[1])),
+					    series.numFactory().numOf(Double.valueOf(line[2])),
+					    series.numFactory().numOf(Double.valueOf(line[3])),
+					    series.numFactory().numOf(Double.valueOf(line[4])),
+					    series.numFactory().numOf(0),
+					    series.numFactory().numOf(0),
+					    0L
+					);
+				series.addBar(bar, true);
+				
+				Bar haBar = new BaseBar(
+					    Duration.ofSeconds(aggregationType.getDuration()),
+					    barStartTime,
+					    barEndTime,
+					    series.numFactory().numOf(Double.valueOf(line[5])),
+					    series.numFactory().numOf(Double.valueOf(line[6])),
+					    series.numFactory().numOf(Double.valueOf(line[7])),
+					    series.numFactory().numOf(Double.valueOf(line[8])),
+					    series.numFactory().numOf(0),
+					    series.numFactory().numOf(0),
+					    0L
+					);
+				haSeries.addBar(haBar, true);
 			}
 		} catch (CsvValidationException | IOException e) {
 			e.printStackTrace();
@@ -125,9 +170,9 @@ public abstract class AbstractBackTest implements BackTestInterface {
 
 			for (Position position : positions) {
 				Date entryTime = Date.from(series.getBar(position.getEntry().getIndex()).getEndTime()
-						.toInstant().truncatedTo(ChronoUnit.MINUTES));
+						.truncatedTo(ChronoUnit.MINUTES));
 				Date exitTime = Date.from(series.getBar(position.getExit().getIndex()).getEndTime()
-						.toInstant().truncatedTo(ChronoUnit.MINUTES));
+						.truncatedTo(ChronoUnit.MINUTES));
 				System.out.printf(format, position.getStartingType(), entryTime, position.getEntry().getValue(),
 						exitTime, position.getExit().getValue(),
 						position.isClosed(), position.getGrossProfit());
@@ -136,7 +181,7 @@ public abstract class AbstractBackTest implements BackTestInterface {
 			Position currPostion = tradingRecord.getCurrentPosition();
 			if (currPostion != null && currPostion.getEntry() != null) {
 				Date entryTime = Date.from(series.getBar(currPostion.getEntry().getIndex()).getEndTime()
-						.toInstant().truncatedTo(ChronoUnit.MINUTES));
+						.truncatedTo(ChronoUnit.MINUTES));
 				System.out.printf(format, currPostion.getStartingType(), entryTime, currPostion.getEntry().getValue(),
 						"", "", currPostion.isClosed(), "");
 			}
@@ -145,7 +190,7 @@ public abstract class AbstractBackTest implements BackTestInterface {
 		}
 
 		System.out.println("Gross Return : " +
-				new ReturnCriterion().calculate(series, tradingRecord));
+				new NetReturnCriterion().calculate(series, tradingRecord));
 	}
 
 }

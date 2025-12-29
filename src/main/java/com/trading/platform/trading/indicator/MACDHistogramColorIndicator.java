@@ -1,5 +1,6 @@
 package com.trading.platform.trading.indicator;
 
+import org.ta4j.core.BarSeries;
 import org.ta4j.core.Indicator;
 import org.ta4j.core.indicators.CachedIndicator;
 import org.ta4j.core.num.Num;
@@ -10,8 +11,12 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 
 	private Indicator<Num> signalIndicator;
 
-	public MACDHistogramColorIndicator(Indicator<Num> macdIndicator, Indicator<Num> signalIndicator) {
+	private BarSeries barSeries;
+
+	public MACDHistogramColorIndicator(Indicator<Num> macdIndicator,
+			Indicator<Num> signalIndicator, BarSeries barSeries) {
 		super(macdIndicator.getBarSeries());
+		this.barSeries = barSeries;
 		this.macdIndicator = macdIndicator;
 		this.signalIndicator = signalIndicator;
 	}
@@ -34,8 +39,9 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 		}
 		Num prevValue = getValue(index - 1);
 		Num value = getValue(index);
-		return value.isGreaterThan(numOf(0)) &&
-				(value.isGreaterThanOrEqual(prevValue) || prevValue.minus(value).isLessThanOrEqual(numOf(1)));
+		return value.isGreaterThan(barSeries.numFactory().numOf(0)) &&
+				(value.isGreaterThanOrEqual(prevValue) || prevValue.minus(value).isLessThanOrEqual(
+						barSeries.numFactory().numOf(1)));
 	}
 
 	/*
@@ -57,7 +63,8 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 
 		Num prevValue = getValue(index - 1);
 		Num value = getValue(index);
-		return value.isGreaterThan(numOf(0)) && prevValue.minus(value).isGreaterThan(numOf(1));
+		return value.isGreaterThan(barSeries.numFactory().numOf(0)) && prevValue.minus(value)
+				.isGreaterThan(barSeries.numFactory().numOf(1));
 	}
 
 	/*
@@ -76,11 +83,12 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 		if (!open.ceil().isEqual(high.ceil())) {
 			return false;
 		}
-		
+
 		Num prevValue = getValue(index - 1);
 		Num value = getValue(index);
-		return value.isLessThan(numOf(0)) &&
-				(value.isLessThanOrEqual(prevValue) || value.minus(prevValue).isLessThanOrEqual(numOf(1)));
+		return value.isLessThan(barSeries.numFactory().numOf(0)) &&
+				(value.isLessThanOrEqual(prevValue) || value.minus(prevValue).isLessThanOrEqual(
+						barSeries.numFactory().numOf(1)));
 	}
 
 	/*
@@ -99,10 +107,11 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 		if (!open.ceil().isEqual(high.ceil())) {
 			return false;
 		}
-		
+
 		Num prevValue = getValue(index - 1);
 		Num value = getValue(index);
-		return value.isLessThan(numOf(0)) && value.minus(prevValue).isGreaterThan(numOf(1));
+		return value.isLessThan(barSeries.numFactory().numOf(0)) && value.minus(prevValue)
+				.isGreaterThan(barSeries.numFactory().numOf(1));
 	}
 
 	@Override
@@ -111,8 +120,7 @@ public class MACDHistogramColorIndicator extends CachedIndicator<Num> {
 	}
 
 	@Override
-	public int getUnstableBars() {
-		// TODO Auto-generated method stub
+	public int getCountOfUnstableBars() {
 		return 0;
 	}
 
