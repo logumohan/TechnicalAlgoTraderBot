@@ -50,8 +50,10 @@ public class TradeJobScheduler {
 	private DecimalFormat decimalFormat;
 
 	public TradeJobScheduler() {
-		this.liveTradeExecutor = Executors.newCachedThreadPool(TradeUtil.getLiveTradingThreadFactory());
-		this.paperTradeExecutor = Executors.newCachedThreadPool(TradeUtil.getPaperTradingThreadFactory());
+		this.liveTradeExecutor = Executors.newCachedThreadPool(TradeUtil
+				.getLiveTradingThreadFactory());
+		this.paperTradeExecutor = Executors.newCachedThreadPool(TradeUtil
+				.getPaperTradingThreadFactory());
 		this.decimalFormat = new DecimalFormat("0.00");
 		this.decimalFormat.setRoundingMode(RoundingMode.HALF_EVEN);
 	}
@@ -63,7 +65,7 @@ public class TradeJobScheduler {
 	private Predicate<Job> getStrategyFilter(Signal signal) {
 		return (Job job) -> signal.getStrategy().equals(job.getStrategy());
 	}
-	
+
 	private Predicate<Job> getMarketTypeFilter(MarketTrendInfo trendInfo) {
 		return (Job job) -> trendInfo.getMarketType().name().equalsIgnoreCase(job.getMarketType());
 	}
@@ -120,7 +122,8 @@ public class TradeJobScheduler {
 				&& job.getJobType().equals(TradeJobType.MULTI_TARGET.getType());
 	}
 
-	private void updateOptionSymbolByJob(Job job, Signal signal, InstrumentSubscription subscription) {
+	private void updateOptionSymbolByJob(Job job, Signal signal,
+			InstrumentSubscription subscription) {
 		OptionType optionType;
 		if (signal.getTradeSignal().equals(OptionType.BUY_CE.name())) {
 			optionType = OptionType.BUY_CE;
@@ -142,24 +145,26 @@ public class TradeJobScheduler {
 		while (delta <= job.getStrikePriceDelta()) {
 			long strikePrice = SignalGeneratorUtil.getNearestStrikePrice(optionType,
 					signal.getLastTradedPrice(), delta);
-			String optionSymbol = SignalGeneratorUtil.getWeeklyOptionSymbol(
-					subscription.getOptionName(), strikePrice, optionType,
-					subscription.getExpiryDay(), subscription.getMonthlyExpiryDay());
+			String optionSymbol = SignalGeneratorUtil.getMonthlyOptionSymbol(subscription
+					.getOptionName(), strikePrice, optionType);
 			long optionToken = session.getTokenByTradingSymbol(optionSymbol);
 			Quote optionQuote = session.getQuote(String.valueOf(optionToken));
 			double currentPrice = Optional.ofNullable(optionQuote)
 					.map((Quote quote) -> Double.valueOf(decimalFormat.format(quote.lastPrice)))
 					.orElse(-1D);
-			LOGGER.info("Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}", optionSymbol, delta, currentPrice,
+			LOGGER.info("Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}", optionSymbol,
+					delta, currentPrice,
 					strikePrice);
 			if (currentPrice >= 300 || delta == job.getStrikePriceDelta()) {
-				LOGGER.info("Selected Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}", optionSymbol, delta,
+				LOGGER.info("Selected Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}",
+						optionSymbol, delta,
 						currentPrice, strikePrice);
 				signal.setStrikePrice(strikePrice);
 				signal.setOptionSymbol(optionSymbol);
 				break;
 			} else {
-				LOGGER.info("Option LTP is less than 300 for Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}",
+				LOGGER.info(
+						"Option LTP is less than 300 for Symbol :: {}, Delta :: {}, LTP :: {}, Strike Price :: {}",
 						optionSymbol, delta, currentPrice, strikePrice);
 				delta += 100;
 			}
@@ -167,7 +172,8 @@ public class TradeJobScheduler {
 		LOGGER.info("Updated signal for the job - {}, signal - {}", job, signal);
 	}
 
-	private void scheduleATRTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	private void scheduleATRTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -181,29 +187,36 @@ public class TradeJobScheduler {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (!persistence.isActivePaperTradeExists(updatedSignal, job)) {
 						paperTradeExecutor.execute(tradeHandler);
-						LOGGER.info("ATR TSL paper trade handler is scheduled, signal - {}, job - {}", updatedSignal,
+						LOGGER.info(
+								"ATR TSL paper trade handler is scheduled, signal - {}, job - {}",
+								updatedSignal,
 								job.getName());
 					} else {
-						LOGGER.info("ATR TSL paper trade for signal - {}, job - {} is already running, skipping...",
+						LOGGER.info(
+								"ATR TSL paper trade for signal - {}, job - {} is already running, skipping...",
 								updatedSignal, job.getName());
 					}
 				} else {
-					LOGGER.error("Error in creating ATR TSL paper trade handler job for signal - {}, job - {}",
+					LOGGER.error(
+							"Error in creating ATR TSL paper trade handler job for signal - {}, job - {}",
 							updatedSignal, job.getName());
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a ATR TSL paper trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error("Exception in scheduling a ATR TSL paper trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleFixedTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedTSLPaperTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -217,29 +230,37 @@ public class TradeJobScheduler {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (!persistence.isActivePaperTradeExists(updatedSignal, job)) {
 						paperTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Fixed TSL paper trade handler is scheduled, signal - {}, job - {}", updatedSignal,
+						LOGGER.info(
+								"Fixed TSL paper trade handler is scheduled, signal - {}, job - {}",
+								updatedSignal,
 								job.getName());
 					} else {
-						LOGGER.info("Fixed TSL paper trade for signal - {}, job - {} is already running, skipping...",
+						LOGGER.info(
+								"Fixed TSL paper trade for signal - {}, job - {} is already running, skipping...",
 								updatedSignal, job.getName());
 					}
 				} else {
-					LOGGER.error("Error in creating fixed TSL paper trade handler job for signal - {}, job - {}",
+					LOGGER.error(
+							"Error in creating fixed TSL paper trade handler job for signal - {}, job - {}",
 							updatedSignal, job.getName());
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a fixed TSL paper trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a fixed TSL paper trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleFixedProfitPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedProfitPaperTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -253,12 +274,14 @@ public class TradeJobScheduler {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (!persistence.isActivePaperTradeExists(updatedSignal, job)) {
 						paperTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Fixed profit paper trade handler is scheduled, signal - {}, job - {}",
+						LOGGER.info(
+								"Fixed profit paper trade handler is scheduled, signal - {}, job - {}",
 								updatedSignal,
 								job.getName());
 					} else {
@@ -267,17 +290,21 @@ public class TradeJobScheduler {
 								updatedSignal, job.getName());
 					}
 				} else {
-					LOGGER.error("Error in creating fixed profit paper trade handler job for signal - {}, job - {}",
+					LOGGER.error(
+							"Error in creating fixed profit paper trade handler job for signal - {}, job - {}",
 							updatedSignal, job.getName());
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a fixed profit paper trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a fixed profit paper trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleMultiTargetPaperTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleMultiTargetPaperTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -291,12 +318,14 @@ public class TradeJobScheduler {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createPaperTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (!persistence.isActivePaperTradeExists(updatedSignal, job)) {
 						paperTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Multi target paper trade handler is scheduled, signal - {}, job - {}",
+						LOGGER.info(
+								"Multi target paper trade handler is scheduled, signal - {}, job - {}",
 								updatedSignal,
 								job.getName());
 					} else {
@@ -305,17 +334,21 @@ public class TradeJobScheduler {
 								updatedSignal, job.getName());
 					}
 				} else {
-					LOGGER.error("Error in creating multi target paper trade handler job for signal - {}, job - {}",
+					LOGGER.error(
+							"Error in creating multi target paper trade handler job for signal - {}, job - {}",
 							updatedSignal, job.getName());
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a multi target paper trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a multi target paper trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleATRTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	private void scheduleATRTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -325,16 +358,18 @@ public class TradeJobScheduler {
 		List<Job> jobsList = jobsRepository.findJobs();
 		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleATRTSLLiveTrade: Job List - {}", jobsList);
-		
+
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (persistence.isActiveLiveTradeExists(updatedSignal, job)) {
-						LOGGER.info("ATR TSL live trade for signal - {}, job - {} is already running, skipping",
+						LOGGER.info(
+								"ATR TSL live trade for signal - {}, job - {} is already running, skipping",
 								updatedSignal, job.getName());
 					} else if (persistence.isConsecutiveTradesFailed(updatedSignal, subscription)) {
 						LOGGER.info(
@@ -342,19 +377,23 @@ public class TradeJobScheduler {
 								subscription, updatedSignal);
 					} else {
 						liveTradeExecutor.execute(tradeHandler);
-						LOGGER.info("ATR TSL live trade handler is scheduled, signal - {}", updatedSignal);
+						LOGGER.info("ATR TSL live trade handler is scheduled, signal - {}",
+								updatedSignal);
 					}
 				} else {
-					LOGGER.error("Error in creating ATR TSL live trade handler job for signal - {}", updatedSignal);
+					LOGGER.error("Error in creating ATR TSL live trade handler job for signal - {}",
+							updatedSignal);
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a ATR TSL live trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error("Exception in scheduling a ATR TSL live trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleFixedTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedTSLLiveTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
@@ -365,16 +404,18 @@ public class TradeJobScheduler {
 		List<Job> jobsList = jobsRepository.findJobs();
 		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleFixedTSLLiveTrade: Job List - {}", jobsList);
-		
+
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (persistence.isActiveLiveTradeExists(updatedSignal, job)) {
-						LOGGER.info("Fixed TSL live trade for signal - {}, job - {} is already running, skipping",
+						LOGGER.info(
+								"Fixed TSL live trade for signal - {}, job - {} is already running, skipping",
 								updatedSignal, job.getName());
 					} else if (persistence.isConsecutiveTradesFailed(updatedSignal, subscription)) {
 						LOGGER.info(
@@ -382,19 +423,25 @@ public class TradeJobScheduler {
 								subscription, updatedSignal);
 					} else {
 						liveTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Fixed TSL live trade handler is scheduled, signal - {}", updatedSignal);
+						LOGGER.info("Fixed TSL live trade handler is scheduled, signal - {}",
+								updatedSignal);
 					}
 				} else {
-					LOGGER.error("Error in creating fixed TSL live trade handler job for signal - {}", updatedSignal);
+					LOGGER.error(
+							"Error in creating fixed TSL live trade handler job for signal - {}",
+							updatedSignal);
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a fixed TSL live trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a fixed TSL live trade, job - {}, signal - {}", job
+								.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleFixedProfitLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleFixedProfitLiveTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -404,16 +451,18 @@ public class TradeJobScheduler {
 		List<Job> jobsList = jobsRepository.findJobs();
 		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleFixedProfitLiveTrade: Job List - {}", jobsList);
-		
+
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (persistence.isActiveLiveTradeExists(updatedSignal, job)) {
-						LOGGER.info("Fixed Profit live trade for signal - {}, job - {} is already running, skipping",
+						LOGGER.info(
+								"Fixed Profit live trade for signal - {}, job - {} is already running, skipping",
 								updatedSignal, job.getName());
 					} else if (persistence.isConsecutiveTradesFailed(updatedSignal, subscription)) {
 						LOGGER.info(
@@ -421,20 +470,25 @@ public class TradeJobScheduler {
 								subscription, updatedSignal);
 					} else {
 						liveTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Fixed Profit live trade handler is scheduled, signal - {}", updatedSignal);
+						LOGGER.info("Fixed Profit live trade handler is scheduled, signal - {}",
+								updatedSignal);
 					}
 				} else {
-					LOGGER.error("Error in creating fixed profit live trade handler job for signal - {}",
+					LOGGER.error(
+							"Error in creating fixed profit live trade handler job for signal - {}",
 							updatedSignal);
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a fixed profit live trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a fixed profit live trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
 	}
 
-	private void scheduleMultiTargetLiveTrade(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription,
+	private void scheduleMultiTargetLiveTrade(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription,
 			TradeManager tradeManager, InstrumentIndicators instrumentIndicators) {
 		Predicate<Job> jobFilter = getStrategyFilter(signal)
 				.and(getMarketTypeFilter(trendInfo))
@@ -444,16 +498,18 @@ public class TradeJobScheduler {
 		List<Job> jobsList = jobsRepository.findJobs();
 		jobsList = jobsList.stream().filter(jobFilter).toList();
 		LOGGER.info("scheduleMultiTargetLiveTrade: Job List - {}", jobsList);
-		
+
 		for (Job job : jobsList) {
 			try {
 				Signal updatedSignal = new Signal(signal);
 				updateOptionSymbolByJob(job, updatedSignal, subscription);
-				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager, updatedSignal,
+				TradeHandler tradeHandler = jobFactory.createLiveTradeHandlerJob(job, tradeManager,
+						updatedSignal,
 						subscription, instrumentIndicators);
 				if (tradeHandler != null) {
 					if (persistence.isActiveLiveTradeExists(updatedSignal, job)) {
-						LOGGER.info("Multi target live trade for signal - {}, job - {} is already running, skipping",
+						LOGGER.info(
+								"Multi target live trade for signal - {}, job - {} is already running, skipping",
 								updatedSignal, job.getName());
 					} else if (persistence.isConsecutiveTradesFailed(updatedSignal, subscription)) {
 						LOGGER.info(
@@ -461,14 +517,18 @@ public class TradeJobScheduler {
 								subscription, updatedSignal);
 					} else {
 						liveTradeExecutor.execute(tradeHandler);
-						LOGGER.info("Multi target live trade handler is scheduled, signal - {}", updatedSignal);
+						LOGGER.info("Multi target live trade handler is scheduled, signal - {}",
+								updatedSignal);
 					}
 				} else {
-					LOGGER.error("Error in creating multi target live trade handler job for signal - {}",
+					LOGGER.error(
+							"Error in creating multi target live trade handler job for signal - {}",
 							updatedSignal);
 				}
 			} catch (TradeException e) {
-				LOGGER.error("Exception in scheduling a multi target live trade, job - {}, signal - {}", job.getName(),
+				LOGGER.error(
+						"Exception in scheduling a multi target live trade, job - {}, signal - {}",
+						job.getName(),
 						signal, e);
 			}
 		}
@@ -479,48 +539,63 @@ public class TradeJobScheduler {
 		return jobsList.stream().filter(Job::isTradable).map(Job::getStrategy).toList();
 	}
 
-	public void schedulePaperTrades(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	public void schedulePaperTrades(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
-		scheduleATRTSLPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedTSLPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedProfitPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleMultiTargetPaperTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleATRTSLPaperTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleFixedTSLPaperTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleFixedProfitPaperTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleMultiTargetPaperTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
 		LOGGER.info("Scheduled paper trades, signal = {}", signal);
 	}
 
-	public void scheduleLiveTrades(MarketTrendInfo trendInfo, Signal signal, InstrumentSubscription subscription, TradeManager tradeManager,
+	public void scheduleLiveTrades(MarketTrendInfo trendInfo, Signal signal,
+			InstrumentSubscription subscription, TradeManager tradeManager,
 			InstrumentIndicators instrumentIndicators) {
-		scheduleATRTSLLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedTSLLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleFixedProfitLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
-		scheduleMultiTargetLiveTrade(trendInfo, signal, subscription, tradeManager, instrumentIndicators);
+		scheduleATRTSLLiveTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleFixedTSLLiveTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleFixedProfitLiveTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
+		scheduleMultiTargetLiveTrade(trendInfo, signal, subscription, tradeManager,
+				instrumentIndicators);
 		LOGGER.info("Scheduled live trades, signal = {}", signal);
 	}
 
 	public void rescheduleTradeHandlerJob(TradeInfo tradeInfo, TradeManager tradeManager) {
 		try {
 			List<Job> jobsList = jobsRepository.findJobs();
-			Optional<Job> job = jobsList.stream().filter(jobInfo -> jobInfo.getName().equals(tradeInfo.getJobName()))
+			Optional<Job> job = jobsList.stream().filter(jobInfo -> jobInfo.getName().equals(
+					tradeInfo.getJobName()))
 					.findFirst();
 
 			if (job.isPresent()) {
-				TradeHandler tradeHandler = jobFactory.createTradeHandlerJob(job.get(), tradeInfo, tradeManager);
+				TradeHandler tradeHandler = jobFactory.createTradeHandlerJob(job.get(), tradeInfo,
+						tradeManager);
 				if (tradeHandler != null) {
 					if (tradeInfo.isLive()) {
 						liveTradeExecutor.execute(tradeHandler);
 					} else {
 						paperTradeExecutor.execute(tradeHandler);
 					}
-					LOGGER.info("Trade job {} for trade {} is started again", tradeInfo.getJobName(), tradeInfo);
+					LOGGER.info("Trade job {} for trade {} is started again", tradeInfo
+							.getJobName(), tradeInfo);
 				} else {
-					LOGGER.error("Error initializing the job by name - {}, trade - {}", tradeInfo.getJobName(),
+					LOGGER.error("Error initializing the job by name - {}, trade - {}", tradeInfo
+							.getJobName(),
 							tradeInfo);
 				}
 			} else {
 				LOGGER.error("Job name {} is not configured", tradeInfo.getJobName());
 			}
 		} catch (TradeException e) {
-			LOGGER.error("Exception in rescheduling the trade after restart - {}", e.getMessage(), e);
+			LOGGER.error("Exception in rescheduling the trade after restart - {}", e.getMessage(),
+					e);
 		}
 	}
 

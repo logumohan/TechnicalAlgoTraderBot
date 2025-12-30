@@ -136,6 +136,26 @@ public class MarketTimeUtil {
 		return getMonthlyExpiryDayDate(ZonedDateTime.now(), 4);
 	}
 
+	public static ZonedDateTime getMonthlyExpiryDayDate(ZonedDateTime dateTime) {
+		YearMonth yearMonth = YearMonth.now();
+		if (dateTime != null) {
+			yearMonth = YearMonth.from(dateTime);
+		}
+
+		LocalDate lastDay = yearMonth.atEndOfMonth();
+		ZonedDateTime expiryDate = ZonedDateTime.of(lastDay.atStartOfDay(), ZoneId.of("Asia/Kolkata"));
+		DayOfWeek dayOfWeek = expiryDate.getDayOfWeek();
+		while (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+			expiryDate = expiryDate.minus(1, ChronoUnit.DAYS);
+			dayOfWeek = expiryDate.getDayOfWeek();
+		}
+		while (isHoliday(expiryDate)) {
+			expiryDate = expiryDate.minus(1, ChronoUnit.DAYS);
+		}
+
+		return expiryDate.truncatedTo(ChronoUnit.DAYS);
+	}
+	
 	public static ZonedDateTime getMonthlyExpiryDayDate(ZonedDateTime dateTime, int expiryDayOfWeek) {
 		YearMonth yearMonth = YearMonth.now();
 		if (dateTime != null) {

@@ -1,7 +1,9 @@
 package com.trading.platform.util;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
@@ -33,48 +35,61 @@ public class SignalGeneratorUtil {
 	private SignalGeneratorUtil() {
 	}
 
-	public static void generateOptionSymbol(Signal signal, OptionType optionType, InstrumentSubscription subscription) {
+	public static void generateOptionSymbol(Signal signal, OptionType optionType,
+			InstrumentSubscription subscription) {
 		generateOptionSymbol(signal, optionType, subscription, subscription.getStrikePriceDelta());
 	}
 
-	public static void generateOptionSymbol(Signal signal, OptionType optionType, InstrumentSubscription subscription,
+	public static void generateOptionSymbol(Signal signal, OptionType optionType,
+			InstrumentSubscription subscription,
 			int strikePriceDelta) {
 		if (subscription != null) {
 			long strikePrice = SignalGeneratorUtil.getNearestStrikePrice(optionType,
 					signal.getLastTradedPrice(), strikePriceDelta);
 			signal.setStrikePrice(strikePrice);
 			String optionSymbol = SignalGeneratorUtil.getMonthlyOptionSymbol(
-					subscription.getOptionName(), strikePrice, optionType, subscription.getMonthlyExpiryDay());
+					subscription.getOptionName(), strikePrice, optionType);
 			signal.setOptionSymbol(optionSymbol);
 		}
 	}
-	
-	public static String getMonthlyOptionSymbol(String symbol, long strikePrice, OptionType optionType, int monthlyExpiryDay) {
-		ZonedDateTime expiryDateMonthly = MarketTimeUtil.getMonthlyExpiryDayDate(ZonedDateTime.now(), monthlyExpiryDay);
-		String shortMonth = expiryDateMonthly.toLocalDate()
-				.getMonth().getDisplayName(TextStyle.SHORT, Locale.US).toUpperCase();
-		int day = expiryDateMonthly.toLocalDate().getDayOfMonth();
-		
-		//BANKNIFTY25DEC58900CE
-        return symbol + day + shortMonth + strikePrice + optionType.getType();
+
+	public static String getMonthlyOptionSymbol(String symbol, long strikePrice,
+			OptionType optionType) {
+		String shortMonth = LocalDate.now().getMonth().getDisplayName(TextStyle.SHORT, Locale.US)
+				.toUpperCase();
+
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy");
+		String shortYear = LocalDate.now().format(formatter);
+
+		// BANKNIFTY25DEC58900CE
+		return symbol + shortYear + shortMonth + strikePrice + optionType.getType();
 	}
 
-	public static String getWeeklyOptionSymbol(String symbol, long strikePrice, OptionType optionType,
+	public static void main(String[] args) {
+		System.out.println(SignalGeneratorUtil.getMonthlyOptionSymbol("BANKNIFTY", 59100,
+				OptionType.BUY_CE));
+	}
+
+	public static String getWeeklyOptionSymbol(String symbol, long strikePrice,
+			OptionType optionType,
 			int weeklyExpiryDay, int monthlyExpiryDay) {
-		ZonedDateTime expiryDateWeekly = MarketTimeUtil.getWeeklyExpiryDayDate(ZonedDateTime.now(), weeklyExpiryDay);
+		ZonedDateTime expiryDateWeekly = MarketTimeUtil.getWeeklyExpiryDayDate(ZonedDateTime.now(),
+				weeklyExpiryDay);
 		ZonedDateTime marketStartTime = MarketTimeUtil.getMarketStartTime();
 		ZonedDateTime expiryDayMarketEndTime = MarketTimeUtil.getMarketEndTime(expiryDateWeekly);
 
 		if (marketStartTime.isAfter(expiryDayMarketEndTime)) {
 			expiryDateWeekly = expiryDateWeekly.plus(6, ChronoUnit.DAYS);
-			expiryDateWeekly = MarketTimeUtil.getWeeklyExpiryDayDate(expiryDateWeekly, weeklyExpiryDay);
+			expiryDateWeekly = MarketTimeUtil.getWeeklyExpiryDayDate(expiryDateWeekly,
+					weeklyExpiryDay);
 		}
 
-		ZonedDateTime expiryDateMonthly = MarketTimeUtil.getMonthlyExpiryDayDate(ZonedDateTime.now(), monthlyExpiryDay);
+		ZonedDateTime expiryDateMonthly = MarketTimeUtil.getMonthlyExpiryDayDate(ZonedDateTime
+				.now(), monthlyExpiryDay);
 		DayOfWeek expiryDayOfWeek = DayOfWeek.of(monthlyExpiryDay);
-		
+
 		String optionSymbol = "";
-		
+
 		if (MarketTimeUtil.isMonthlyExpiryWeek(expiryDayOfWeek)) {
 			int yearIn2Digits = expiryDateMonthly.getYear() % 100;
 			String shortMonth = expiryDateMonthly.toLocalDate()
@@ -105,7 +120,8 @@ public class SignalGeneratorUtil {
 		return optionSymbol.toUpperCase();
 	}
 
-	public static long getNearestStrikePrice(OptionType type, double lastTradedPrice, double strikePriceDelta) {
+	public static long getNearestStrikePrice(OptionType type, double lastTradedPrice,
+			double strikePriceDelta) {
 		switch (type) {
 		case BUY_CE, SELL_CE:
 			return Math.round((lastTradedPrice - strikePriceDelta) / 100) * 100;
@@ -116,7 +132,8 @@ public class SignalGeneratorUtil {
 		}
 	}
 
-	public static Class<? extends InstrumentIndicators> getIndicatorClazz(AggregationType aggregationType) {
+	public static Class<? extends InstrumentIndicators> getIndicatorClazz(
+			AggregationType aggregationType) {
 		switch (aggregationType.getName()) {
 		case SignalGeneratorConstants.ONE_MINUTE:
 			return OneMinuteInstrumentIndicators.class;
@@ -135,7 +152,8 @@ public class SignalGeneratorUtil {
 		}
 	}
 
-	public static Class<? extends InstrumentView> getInstrumentViewClazz(AggregationType aggregationType) {
+	public static Class<? extends InstrumentView> getInstrumentViewClazz(
+			AggregationType aggregationType) {
 		switch (aggregationType.getName()) {
 		case SignalGeneratorConstants.ONE_MINUTE:
 			return OneMinuteInstrumentView.class;
