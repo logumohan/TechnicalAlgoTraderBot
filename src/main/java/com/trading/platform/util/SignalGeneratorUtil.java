@@ -2,6 +2,8 @@ package com.trading.platform.util;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Month;
+import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -55,20 +57,31 @@ public class SignalGeneratorUtil {
 
 	public static String getMonthlyOptionSymbol(String symbol, long strikePrice,
 			OptionType optionType) {
-		String shortMonth = LocalDate.now().getMonth().getDisplayName(TextStyle.SHORT, Locale.US)
+		LocalDate today = LocalDate.now();
+		LocalDate expiryDay = getLastTuesdayOfTheMonth(today.getYear(), today.getMonth());
+		if (today.isAfter(expiryDay)) {
+			Month nextMonth = today.getMonth().plus(1);
+            int year = today.getYear();
+            if (nextMonth == Month.JANUARY) {
+                year++;
+            }
+            expiryDay = getLastTuesdayOfTheMonth(year, nextMonth);
+		}
+		String shortMonth = expiryDay.getMonth().getDisplayName(TextStyle.SHORT, Locale.US)
 				.toUpperCase();
+        String shortYear = expiryDay.format(DateTimeFormatter.ofPattern("yy"));
 
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy");
-		String shortYear = LocalDate.now().format(formatter);
-
-		// BANKNIFTY25DEC58900CE
+		// BANKNIFTY26JAN58900CE
 		return symbol + shortYear + shortMonth + strikePrice + optionType.getType();
 	}
-
-	public static void main(String[] args) {
-		System.out.println(SignalGeneratorUtil.getMonthlyOptionSymbol("BANKNIFTY", 59100,
-				OptionType.BUY_CE));
-	}
+	
+    private static LocalDate getLastTuesdayOfTheMonth(int year, Month month) {
+        LocalDate lastDay = YearMonth.of(year, month).atEndOfMonth();
+        while (lastDay.getDayOfWeek() != DayOfWeek.TUESDAY) {
+            lastDay = lastDay.minusDays(1);
+        }
+        return lastDay;
+    }
 
 	public static String getWeeklyOptionSymbol(String symbol, long strikePrice,
 			OptionType optionType,
